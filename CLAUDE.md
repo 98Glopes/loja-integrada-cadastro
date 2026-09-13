@@ -48,6 +48,7 @@ Por que isso importa aqui: a evolução para serviço web deve consistir apenas 
 
 ## Convenções de código (não negociáveis)
 
+- **Arquitetura evolutiva, não especulativa:** crie pastas, ports e abstrações somente quando uma funcionalidade concreta precisar delas. Não antecipe camadas, interfaces ou módulos "para o futuro"; o layout acima é a direção, não um esqueleto a preencher.
 - **Uma classe por arquivo.** Nome do arquivo em `snake_case` espelhando a classe (`produto.py` → `class Produto`).
 - **Type hints em tudo** (parâmetros, retornos, atributos). `mypy --strict` deve passar.
 - **Clean Code / legibilidade humana:** nomes que revelam intenção, funções pequenas, sem comentários que expliquem código ruim — refatore em vez de comentar.
