@@ -285,7 +285,7 @@ src/loja_integrada_cadastro/recursos/
     kiki.md  onda-marinha.md  somnii.md  coloritta.md  menina-anjo.md  luc-boo.md
     nina-go.md  kyly.md  lemon.md  _generico.md
   dados_mestre.yaml       marcas (canônica + aliases aceitos), cores da grade, tamanhos,
-                          padrões físicos, categorias conhecidas (só referência)
+                          categorias conhecidas (só referência)
   prompts/
     copywriter.j2  seo.j2  qa.j2   (system e user separados por bloco)
 ```
@@ -395,7 +395,7 @@ abaixo é a **direção**; cada task cria só o que a funcionalidade dela exige.
 src/loja_integrada_cadastro/
   🔲 models/
     🔲 produto_entrada.py            ProdutoEntrada (frozen) + VariacaoEntrada
-    🔲 dados_mestre.py               DadosMestre: marcas (canônica+aliases), cores, tamanhos, padrões físicos
+    ✅ dados_mestre.py               DadosMestre: marcas (canônica+aliases), cores, tamanhos, categorias de referência (task 02)
     🔲 resultado_validacao.py        ResultadoValidacao {problemas, avisos}
     🔲 foto_produto.py               FotoProduto (cor, ordem, nome, chave, url)
     🔲 textos_produto.py             TextosProduto (4 campos)
@@ -407,6 +407,7 @@ src/loja_integrada_cadastro/
     🔲 slug.py                       slugificação (sem acento, minúsculas, hífens)
     exceptions/
       ✅ erro_configuracao.py        ErroConfiguracao(variavel, valor_invalido) (task 01)
+      ✅ erro_recursos.py            ErroRecursos(recurso, motivo) (task 02)
       🔲                             ErroValidacaoEntrada, ErroProcessamentoImagem, ErroPublicacaoImagem,
                                   ErroGeracaoTexto, ErroConsultaLoja, ErroEstadoLote
   🔲 services/
@@ -438,7 +439,7 @@ src/loja_integrada_cadastro/
     🔲 cliente_llm_anthropic.py               SDK anthropic: parse(), caching, usage, erros → domínio
     🔲 esquemas_llm.py                        modelos pydantic de saída estruturada (por agente)
     🔲 repositorio_prompts_jinja.py           Jinja2 + recursos do pacote
-    🔲 carregador_recursos.py                 lê recursos/ (md, yaml) via importlib.resources
+    ✅ carregador_recursos.py                 lê recursos/ (md, yaml) via importlib.resources (task 02)
     🔲 repositorio_estado_lote_json.py
     🔲 escritor_planilha_saida_openpyxl.py
     🔲 consulta_loja_http.py                  httpx + selectolax
@@ -446,7 +447,7 @@ src/loja_integrada_cadastro/
     ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
     ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
     🔲 composicao.py                          montar_processador_lote(), montar_verificador() (composition root)
-  🔲 recursos/                                §6.4
+  🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; demais arquivos pendentes)
   ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada | validar | processar | verificar (task 01; todos "não implementado", código 2)
 ```
 
@@ -463,9 +464,10 @@ Regras que as tasks devem respeitar:
   ser atualizado etapa a etapa) — mutação apenas via métodos com nome de intenção
   (`registrar_fotos`, `registrar_textos`, `reprovar`…).
 
-Dependências instaladas: `openpyxl`, `python-dotenv` (task 01). A adicionar quando a task
-correspondente chegar: `anthropic`, `pydantic`, `jinja2`, `pyyaml`, `pillow`, `pillow-heif`,
-`boto3`, `httpx`, `selectolax` (+ stubs para mypy: `types-PyYAML`, `boto3-stubs[s3]`).
+Dependências instaladas: `openpyxl`, `python-dotenv` (task 01); `pyyaml` (task 02, com stub
+`types-PyYAML`). A adicionar quando a task correspondente chegar: `anthropic`, `pydantic`,
+`jinja2`, `pillow`, `pillow-heif`, `boto3`, `httpx`, `selectolax` (+ stub para mypy:
+`boto3-stubs[s3]`).
 
 Convenção de lint: exceções de domínio chamam-se `Erro<Nome>`; a regra ruff `N818` (sufixo
 `Error`) está desligada no `pyproject.toml` por isso.
@@ -602,3 +604,16 @@ desvio altera uma decisão de arquitetura (não para desvios locais — esses fi
 - **Consequência:** `docs/` permanece fonte de verdade do que existe; desvios têm motivo
   registrado; o custo é ~10 minutos de documentação por task.
 - **Task:** todas, a partir da 01.
+
+### ADR-004 — Padrões físicos saem de `dados_mestre.yaml`/`DadosMestre` (13/09/2026)
+- **Contexto:** a task 02 previa uma seção `padroes_fisicos` no YAML e um campo correspondente
+  em `DadosMestre`, mas `Configuracao` (task 01) já expõe `peso_kg`/`altura_cm`/`largura_cm`/
+  `comprimento_cm` via `.env` com os mesmos defaults (`0.1`/`4`/`22`/`22`), e o futuro
+  `MontadorPlanilha` (task 14) consome `Configuracao`, não `DadosMestre`, para preencher essas
+  colunas na planilha de saída.
+- **Decisão:** `padroes_fisicos` não entra em `dados_mestre.yaml` nem em `DadosMestre`;
+  `Configuracao` continua sendo a única fonte desses valores.
+- **Consequência:** dado de configuração operacional fica numa fonte só, sem duplicar/desalinhar
+  com o YAML de dados de domínio; `DadosMestre` fica focado em marcas, cores, tamanhos e
+  categorias de referência.
+- **Task:** 02.
