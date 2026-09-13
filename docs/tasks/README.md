@@ -20,7 +20,7 @@ contrato, prompt engineering e revisão final; **sonnet** para código determin�
 | # | Task | Depende de | Modelo | Status | Validação |
 |---|---|---|---|---|---|
 | 01 | [Fundação: configuração, CLI com subcomandos](01-fundacao-configuracao-cli.md) | — | sonnet | concluída | [spec](../specs/tasks/01-fundacao-configuracao-cli.md) — 4 subcomandos retornam 2; `Configuracao.do_ambiente()` com padrões de §11; 26 testes |
-| 02 | [Dados mestre e carregador de recursos](02-dados-mestre-recursos.md) | 01 | sonnet | pendente | |
+| 02 | [Dados mestre e carregador de recursos](02-dados-mestre-recursos.md) | 01 | sonnet | concluída | [spec](../specs/tasks/02-dados-mestre-recursos.md) — YAML com 413 cores/17 tamanhos/45 categorias extraído do `.xlsx` real; `DadosMestre`/`CarregadorRecursos` batem com o critério de aceite; 52 testes |
 | 03 | [Spike: a importação cria valor de grade?](03-spike-grade-importacao.md) | — | sonnet | pendente | |
 | 04 | [Planilha de entrada: modelo, leitor e `modelo-entrada`](04-planilha-entrada.md) | 02 | sonnet | pendente | |
 | 05 | [Validador de entrada, catálogo de fotos e `validar`](05-validador-entrada.md) | 03, 04 | sonnet | pendente | |

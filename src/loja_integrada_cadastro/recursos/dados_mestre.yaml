@@ -1,0 +1,923 @@
+marcas:
+  canonicas:
+    kiki:
+      aliases:
+      - Kiki
+      - Kiki Xodó
+      - KIKI
+    Onda Marinha:
+      aliases: []
+    Colorittá:
+      aliases:
+      - Coloritta
+      - colorittá
+    somnii:
+      aliases: []
+    Menina Anjo:
+      aliases: []
+    Luc.boo:
+      aliases:
+      - Lucboo
+      - Luc boo
+    Nina Go:
+      aliases: []
+    Kyly:
+      aliases: []
+    Lemon:
+      aliases: []
+  proibidas:
+    Açucena: É o nome do grupo fornecedor (dono de Onda Marinha, Nina Go e Somnii),
+      não uma marca — existe em 26 produtos legados que ficam como estão por decisão.
+    Abrange: Canal de distribuição, não marca própria — evitar usar como valor de
+      marca (aparece hoje em só 1 produto, provavelmente por engano).
+cores:
+- nome: Beige
+  uso: 919
+- nome: Rosa
+  uso: 713
+- nome: Preto
+  uso: 680
+- nome: Branco
+  uso: 479
+- nome: Vermelho
+  uso: 196
+- nome: Cinza Claro
+  uso: 180
+- nome: Romantic
+  uso: 175
+- nome: Silver
+  uso: 137
+- nome: Azul aco
+  uso: 126
+- nome: Gray
+  uso: 94
+- nome: Bone
+  uso: 91
+- nome: Alto
+  uso: 78
+- nome: Deep Cove
+  uso: 70
+- nome: Sulu
+  uso: 64
+- nome: Coral
+  uso: 60
+- nome: Mint Green
+  uso: 59
+- nome: Algae Green
+  uso: 58
+- nome: Pastel Green
+  uso: 58
+- nome: Laranja
+  uso: 57
+- nome: Amulet
+  uso: 52
+- nome: Canary
+  uso: 49
+- nome: Green Yellow
+  uso: 42
+- nome: Lilac
+  uso: 41
+- nome: Black Rock
+  uso: 40
+- nome: Rose Bud
+  uso: 36
+- nome: Azure
+  uso: 33
+- nome: Bamboo
+  uso: 33
+- nome: Brink Pink
+  uso: 33
+- nome: Biscay
+  uso: 32
+- nome: Chantilly
+  uso: 31
+- nome: Silver Chalice
+  uso: 31
+- nome: Vermelho escuro
+  uso: 31
+- nome: Buff
+  uso: 30
+- nome: Gulf Blue
+  uso: 29
+- nome: Lime
+  uso: 29
+- nome: Boulder
+  uso: 28
+- nome: Highland
+  uso: 28
+- nome: Acapulco
+  uso: 27
+- nome: Aqua Deep
+  uso: 27
+- nome: Blue Zodiac
+  uso: 27
+- nome: Bunting
+  uso: 27
+- nome: Verde escuro
+  uso: 27
+- nome: Amarelo
+  uso: 26
+- nome: Black Pearl
+  uso: 26
+- nome: Classic Rose
+  uso: 26
+- nome: Mercury
+  uso: 26
+- nome: Screamin' Green
+  uso: 26
+- nome: Astral
+  uso: 25
+- nome: Azure Radiance
+  uso: 24
+- nome: Chardonnay
+  uso: 24
+- nome: Bourbon
+  uso: 23
+- nome: Apricot Peach
+  uso: 22
+- nome: Aqua Forest
+  uso: 22
+- nome: Corn
+  uso: 22
+- nome: Gallery
+  uso: 22
+- nome: Harlequin
+  uso: 22
+- nome: Shocking Pink
+  uso: 22
+- nome: Sunglow
+  uso: 22
+- nome: Antique Brass
+  uso: 21
+- nome: Castro
+  uso: 21
+- nome: Astra
+  uso: 20
+- nome: Barley Corn
+  uso: 20
+- nome: Celadon
+  uso: 20
+- nome: Arapawa
+  uso: 19
+- nome: Atomic Tangerine
+  uso: 18
+- nome: Bay Leaf
+  uso: 18
+- nome: Brown Rust
+  uso: 18
+- nome: Downriver
+  uso: 18
+- nome: Flamingo
+  uso: 18
+- nome: Nobel
+  uso: 18
+- nome: Avocado
+  uso: 17
+- nome: Brown
+  uso: 17
+- nome: Chambray
+  uso: 17
+- nome: Cinza
+  uso: 17
+- nome: Lucky Point
+  uso: 17
+- nome: Regent St Blue
+  uso: 17
+- nome: Valhalla
+  uso: 17
+- nome: Verde claro
+  uso: 17
+- nome: Cabaret
+  uso: 16
+- nome: De York
+  uso: 16
+- nome: Flush Orange
+  uso: 16
+- nome: Jacarta
+  uso: 16
+- nome: Persian Rose
+  uso: 16
+- nome: Port Gore
+  uso: 16
+- nome: Salem
+  uso: 16
+- nome: Vista White
+  uso: 16
+- nome: Akaroa
+  uso: 15
+- nome: Allports
+  uso: 15
+- nome: Almond
+  uso: 15
+- nome: Axolotl
+  uso: 15
+- nome: Bright Green
+  uso: 15
+- nome: Brilliant Rose
+  uso: 15
+- nome: Green Pea
+  uso: 15
+- nome: Pink Lace
+  uso: 15
+- nome: Shadow Green
+  uso: 15
+- nome: Beryl Green
+  uso: 14
+- nome: Bright Sun
+  uso: 14
+- nome: Light Wisteria
+  uso: 14
+- nome: Millbrook
+  uso: 14
+- nome: Salmon
+  uso: 14
+- nome: Silver Tree
+  uso: 14
+- nome: Atoll
+  uso: 13
+- nome: Buttercup
+  uso: 13
+- nome: Rock Blue
+  uso: 13
+- nome: Texas Rose
+  uso: 13
+- nome: Tickle Me Pink
+  uso: 13
+- nome: Viola
+  uso: 13
+- nome: Albescent White
+  uso: 12
+- nome: Almond Frost
+  uso: 12
+- nome: Apple Blossom
+  uso: 12
+- nome: Aqua Island
+  uso: 12
+- nome: Azul petroleo
+  uso: 12
+- nome: Big Stone
+  uso: 12
+- nome: Burning Orange
+  uso: 12
+- nome: Cornflower Lilac
+  uso: 12
+- nome: Dusty Gray
+  uso: 12
+- nome: Glacier
+  uso: 12
+- nome: Hippie Green
+  uso: 12
+- nome: Hot Pink
+  uso: 12
+- nome: Mahogany
+  uso: 12
+- nome: Moss Green
+  uso: 12
+- nome: Olivine
+  uso: 12
+- nome: Orange Peel
+  uso: 12
+- nome: Pohutukawa
+  uso: 12
+- nome: Tolopea
+  uso: 12
+- nome: Yellow Green
+  uso: 12
+- nome: Aquamarine
+  uso: 11
+- nome: Asparagus
+  uso: 11
+- nome: Azul claro
+  uso: 11
+- nome: Brandy
+  uso: 11
+- nome: Cornflower
+  uso: 11
+- nome: Lavender Magenta
+  uso: 11
+- nome: Navy Blue
+  uso: 11
+- nome: Pink Salmon
+  uso: 11
+- nome: Sahara Sand
+  uso: 11
+- nome: Shocking
+  uso: 11
+- nome: Amber
+  uso: 10
+- nome: Cardin Green
+  uso: 10
+- nome: Carrot Orange
+  uso: 10
+- nome: Cranberry
+  uso: 10
+- nome: Crusta
+  uso: 10
+- nome: Ebony
+  uso: 10
+- nome: Fern
+  uso: 10
+- nome: Lightning Yellow
+  uso: 10
+- nome: Macaroni and Cheese
+  uso: 10
+- nome: Melanie
+  uso: 10
+- nome: Royal Blue
+  uso: 10
+- nome: Thunderbird
+  uso: 10
+- nome: Tia Maria
+  uso: 10
+- nome: Trinidad
+  uso: 10
+- nome: Tundora
+  uso: 10
+- nome: Vista Blue
+  uso: 10
+- nome: Bali Hai
+  uso: 9
+- nome: Bay of Many
+  uso: 9
+- nome: Bermuda
+  uso: 9
+- nome: Brandy Punch
+  uso: 9
+- nome: Deep Sea Green
+  uso: 9
+- nome: Green Haze
+  uso: 9
+- nome: International Klein Blue
+  uso: 9
+- nome: Lavanda
+  uso: 9
+- nome: Persian Pink
+  uso: 9
+- nome: Red Ribbon
+  uso: 9
+- nome: Reef
+  uso: 9
+- nome: Sapphire
+  uso: 9
+- nome: Stratos
+  uso: 9
+- nome: Venice Blue
+  uso: 9
+- nome: Viking
+  uso: 9
+- nome: Apricot
+  uso: 8
+- nome: Bordeaux
+  uso: 8
+- nome: Cactus
+  uso: 8
+- nome: Cerulean
+  uso: 8
+- nome: Fern Green
+  uso: 8
+- nome: Granny Smith Apple
+  uso: 8
+- nome: Muddy Waters
+  uso: 8
+- nome: Sea Green
+  uso: 8
+- nome: Smalt
+  uso: 8
+- nome: Starship
+  uso: 8
+- nome: Astronaut
+  uso: 7
+- nome: Azalea
+  uso: 7
+- nome: Azul
+  uso: 7
+- nome: Blossom
+  uso: 7
+- nome: Bracken
+  uso: 7
+- nome: Camelot
+  uso: 7
+- nome: Chilean Fire
+  uso: 7
+- nome: Comet
+  uso: 7
+- nome: Confetti
+  uso: 7
+- nome: Cream
+  uso: 7
+- nome: Danube
+  uso: 7
+- nome: Dark Fern
+  uso: 7
+- nome: Deep Koamaru
+  uso: 7
+- nome: Early Dawn
+  uso: 7
+- nome: Evening Sea
+  uso: 7
+- nome: Fuel Yellow
+  uso: 7
+- nome: Gun Powder
+  uso: 7
+- nome: Mauve
+  uso: 7
+- nome: Mocassim
+  uso: 7
+- nome: Peach
+  uso: 7
+- nome: Perano
+  uso: 7
+- nome: Persian Blue
+  uso: 7
+- nome: Pizazz
+  uso: 7
+- nome: Polo Blue
+  uso: 7
+- nome: Rajah
+  uso: 7
+- nome: Red Stage
+  uso: 7
+- nome: Regal Blue
+  uso: 7
+- nome: Sea Buckthorn
+  uso: 7
+- nome: Seagull
+  uso: 7
+- nome: Sinbad
+  uso: 7
+- nome: Sorbus
+  uso: 7
+- nome: Tea Green
+  uso: 7
+- nome: Tenn
+  uso: 7
+- nome: Vin Rouge
+  uso: 7
+- nome: Wedgewood
+  uso: 7
+- nome: Zombie
+  uso: 7
+- nome: Apache
+  uso: 6
+- nome: Apricot White
+  uso: 6
+- nome: Bazaar
+  uso: 6
+- nome: Bermuda Gray
+  uso: 6
+- nome: Black Russian
+  uso: 6
+- nome: Can Can
+  uso: 6
+- nome: Candlelight
+  uso: 6
+- nome: Cement
+  uso: 6
+- nome: Chamois
+  uso: 6
+- nome: Conifer
+  uso: 6
+- nome: Contessa
+  uso: 6
+- nome: Downy
+  uso: 6
+- nome: East Bay
+  uso: 6
+- nome: Electric Lime
+  uso: 6
+- nome: Flesh
+  uso: 6
+- nome: Froly
+  uso: 6
+- nome: Gamboge
+  uso: 6
+- nome: Golden Tainoi
+  uso: 6
+- nome: Gorse
+  uso: 6
+- nome: Green Vogue
+  uso: 6
+- nome: Grenadier
+  uso: 6
+- nome: Gulf Stream
+  uso: 6
+- nome: Hit Pink
+  uso: 6
+- nome: Hot Toddy
+  uso: 6
+- nome: Jade
+  uso: 6
+- nome: Laser
+  uso: 6
+- nome: Lima
+  uso: 6
+- nome: Lynch
+  uso: 6
+- nome: Malachite
+  uso: 6
+- nome: Malibu
+  uso: 6
+- nome: Meteor
+  uso: 6
+- nome: Mine Shaft
+  uso: 6
+- nome: Neon Carrot
+  uso: 6
+- nome: Nepal
+  uso: 6
+- nome: Ocean Green
+  uso: 6
+- nome: Paua
+  uso: 6
+- nome: Persimmon
+  uso: 6
+- nome: Pomegranate
+  uso: 6
+- nome: Rhino
+  uso: 6
+- nome: Ripe Lemon
+  uso: 6
+- nome: Rose
+  uso: 6
+- nome: Scarlet
+  uso: 6
+- nome: Selective Yellow
+  uso: 6
+- nome: Sidecar
+  uso: 6
+- nome: Spring Green
+  uso: 6
+- nome: Strikemaster
+  uso: 6
+- nome: Supernova
+  uso: 6
+- nome: Torch Red
+  uso: 6
+- nome: Vanilla
+  uso: 6
+- nome: Waikawa Gray
+  uso: 6
+- nome: Whiskey
+  uso: 6
+- nome: Bull Shot
+  uso: 5
+- nome: Cascade
+  uso: 5
+- nome: Cerise Red
+  uso: 5
+- nome: Clover
+  uso: 5
+- nome: Copper
+  uso: 5
+- nome: Harvest Gold
+  uso: 5
+- nome: Melon
+  uso: 5
+- nome: Pink
+  uso: 5
+- nome: Portica
+  uso: 5
+- nome: Agua
+  uso: 4
+- nome: Ash
+  uso: 4
+- nome: Azul Ceu
+  uso: 4
+- nome: Banana Mania
+  uso: 4
+- nome: Bianca
+  uso: 4
+- nome: Bismark
+  uso: 4
+- nome: Black Marlin
+  uso: 4
+- nome: Blue Ribbon
+  uso: 4
+- nome: Blue Stone
+  uso: 4
+- nome: Bombay
+  uso: 4
+- nome: Buttery White
+  uso: 4
+- nome: Caramel
+  uso: 4
+- nome: Caribbean Green
+  uso: 4
+- nome: Cavern Pink
+  uso: 4
+- nome: Cinnabar
+  uso: 4
+- nome: Cosmos
+  uso: 4
+- nome: Cotton Candy
+  uso: 4
+- nome: Dingley
+  uso: 4
+- nome: Double Colonial White
+  uso: 4
+- nome: Driftwood
+  uso: 4
+- nome: Equator
+  uso: 4
+- nome: Eunry
+  uso: 4
+- nome: French Pass
+  uso: 4
+- nome: Geraldine
+  uso: 4
+- nome: Glade Green
+  uso: 4
+- nome: Hot Cinnamon
+  uso: 4
+- nome: Java
+  uso: 4
+- nome: Jordy Blue
+  uso: 4
+- nome: Light Orchid
+  uso: 4
+- nome: Link Water
+  uso: 4
+- nome: Lochinvar
+  uso: 4
+- nome: Magic Mint
+  uso: 4
+- nome: Mauvelous
+  uso: 4
+- nome: Metallic Bronze
+  uso: 4
+- nome: Midnight
+  uso: 4
+- nome: Mulberry Wood
+  uso: 4
+- nome: Orange
+  uso: 4
+- nome: Oxley
+  uso: 4
+- nome: Padua
+  uso: 4
+- nome: Pale Prim
+  uso: 4
+- nome: Peach Schnapps
+  uso: 4
+- nome: Pink Flamingo
+  uso: 4
+- nome: Rodeo Dust
+  uso: 4
+- nome: Roman
+  uso: 4
+- nome: Roman Coffee
+  uso: 4
+- nome: Romance
+  uso: 4
+- nome: Rouge
+  uso: 4
+- nome: San Felix
+  uso: 4
+- nome: Scarlett
+  uso: 4
+- nome: Sea Pink
+  uso: 4
+- nome: Shamrock
+  uso: 4
+- nome: Sherpa Blue
+  uso: 4
+- nome: Shilo
+  uso: 4
+- nome: Ship Cove
+  uso: 4
+- nome: Spanish Green
+  uso: 4
+- nome: Spindle
+  uso: 4
+- nome: Spring Leaves
+  uso: 4
+- nome: Spring Rain
+  uso: 4
+- nome: Sunshade
+  uso: 4
+- nome: Tuft Bush
+  uso: 4
+- nome: Tussock
+  uso: 4
+- nome: Violet Red
+  uso: 4
+- nome: Viridian Green
+  uso: 4
+- nome: Well Read
+  uso: 4
+- nome: Aluminium
+  uso: 3
+- nome: Aquamarine Blue
+  uso: 3
+- nome: Australian Mint
+  uso: 3
+- nome: Azul escuro
+  uso: 3
+- nome: Barley White
+  uso: 3
+- nome: Beaver
+  uso: 3
+- nome: Bittersweet
+  uso: 3
+- nome: Blaze Orange
+  uso: 3
+- nome: Blizzard Blue
+  uso: 3
+- nome: Blumine
+  uso: 3
+- nome: Bright Gray
+  uso: 3
+- nome: Bronze
+  uso: 3
+- nome: Casablanca
+  uso: 3
+- nome: Chelsea Cucumber
+  uso: 3
+- nome: Chelsea Gem
+  uso: 3
+- nome: Cherub
+  uso: 3
+- nome: Chetwode Blue
+  uso: 3
+- nome: Chinook
+  uso: 3
+- nome: Citrine White
+  uso: 3
+- nome: Cloud Burst
+  uso: 3
+- nome: Cobalt
+  uso: 3
+- nome: County Green
+  uso: 3
+- nome: Cream Brulee
+  uso: 3
+- nome: Crown of Thorns
+  uso: 3
+- nome: Crusoe
+  uso: 3
+- nome: Donkey Brown
+  uso: 3
+- nome: Emerald
+  uso: 3
+- nome: Energy Yellow
+  uso: 3
+- nome: Esmeralda
+  uso: 3
+- nome: Eucalyptus
+  uso: 3
+- nome: Festival
+  uso: 3
+- nome: Fiord
+  uso: 3
+- nome: Fruit Salad
+  uso: 3
+- nome: Genoa
+  uso: 3
+- nome: Gold
+  uso: 3
+- nome: Green
+  uso: 3
+- nome: Haiti
+  uso: 3
+- nome: Illusion
+  uso: 3
+- nome: International Orange
+  uso: 3
+- nome: Jacksons Purple
+  uso: 3
+- nome: Jaffa
+  uso: 3
+- nome: Jewel
+  uso: 3
+- nome: Keppel
+  uso: 3
+- nome: Meteorite
+  uso: 3
+- nome: Milano Red
+  uso: 3
+- nome: Mint Tulip
+  uso: 3
+- nome: Mona Lisa
+  uso: 3
+- nome: Old Lace
+  uso: 3
+- nome: Orange Roughy
+  uso: 3
+- nome: Oxford Blue
+  uso: 3
+- nome: Parsley
+  uso: 3
+- nome: Picasso
+  uso: 3
+- nome: Primrose
+  uso: 3
+- nome: Puerto Rico
+  uso: 3
+- nome: Rose Fog
+  uso: 3
+- nome: Royal Heath
+  uso: 3
+- nome: Saffron
+  uso: 3
+- nome: San Juan
+  uso: 3
+- nome: Sea Nymph
+  uso: 3
+- nome: Stark White
+  uso: 3
+- nome: Stromboli
+  uso: 3
+- nome: Sundown
+  uso: 3
+- nome: Sunflower
+  uso: 3
+- nome: Sweet Corn
+  uso: 3
+- nome: Tan Hide
+  uso: 3
+- nome: Tangaroa
+  uso: 3
+- nome: Tango
+  uso: 3
+- nome: Terracotta
+  uso: 3
+- nome: Tradewind
+  uso: 3
+- nome: Twine
+  uso: 3
+- nome: Valencia
+  uso: 3
+- nome: Verde
+  uso: 3
+- nome: Watercourse
+  uso: 3
+- nome: Wild Sand
+  uso: 3
+- nome: Mango Tango
+  uso: 2
+- nome: Ultramarine
+  uso: 2
+tamanhos:
+- P
+- M
+- G
+- GG
+- XG
+- '1'
+- '2'
+- '3'
+- '4'
+- '6'
+- '8'
+- '10'
+- '12'
+- '14'
+- '16'
+- '18'
+- '20'
+categorias_referencia:
+- Bazar
+- Inverno > 1 - Linha Baby (P ao XG) > Menina > Body
+- Inverno > 1 - Linha Baby (P ao XG) > Menina > Conjuntos
+- Inverno > 1 - Linha Baby (P ao XG) > Menina > Vestido
+- Inverno > 1 - Linha Baby (P ao XG) > Menino > Acessórios
+- Inverno > 1 - Linha Baby (P ao XG) > Menino > Body
+- Inverno > 1 - Linha Baby (P ao XG) > Menino > Conjunto
+- Inverno > 2 - Linha Primeiros Passos (1 ao 4) > Menina > Blusa
+- Inverno > 2 - Linha Primeiros Passos (1 ao 4) > Menina > Blusinha
+- Inverno > 2 - Linha Primeiros Passos (1 ao 4) > Menina > Calça
+- Inverno > 2 - Linha Primeiros Passos (1 ao 4) > Menina > Vestido
+- Inverno > 2 - Linha Primeiros Passos (1 ao 4) > Menino > Blusa
+- Inverno > 2 - Linha Primeiros Passos (1 ao 4) > Menino > Calça
+- Inverno > 2 - Linha Primeiros Passos (1 ao 4) > Menino > Camiseta
+- Inverno > 2 - Linha Primeiros Passos (1 ao 4) > Menino > Conjunto
+- Inverno > 3 - Linha Kids (6 ao 10) > Menina > Blusinha
+- Inverno > 3 - Linha Kids (6 ao 10) > Menina > Calça
+- Inverno > 3 - Linha Kids (6 ao 10) > Menina > Conjunto
+- Inverno > 3 - Linha Kids (6 ao 10) > Menina > Vestido
+- Inverno > 3 - Linha Kids (6 ao 10) > Menino > Conjunto
+- Inverno > 4 - Linha Teen (12 ao 18) > Menina > Blusa
+- Inverno > 4 - Linha Teen (12 ao 18) > Menina > Blusinha
+- Inverno > 4 - Linha Teen (12 ao 18) > Menino > Blusa
+- Inverno > 4 - Linha Teen (12 ao 18) > Menino > Camiseta
+- Inverno > 4 - Linha Teen (12 ao 18) > Menino > Conjunto
+- Linha Baby (P ao XG) > Menina > Body
+- Linha Baby (P ao XG) > Menina > Conjunto
+- Linha Baby (P ao XG) > Menina > Macacão
+- Linha Baby (P ao XG) > Menino > Conjunto
+- Linha Baby (P ao XG) > Menino > Macacão
+- Linha Kids (6 ao 10) > Menina > Blusinha
+- Linha Kids (6 ao 10) > Menina > Conjunto
+- Linha Kids (6 ao 10) > Menina > Macacão
+- Linha Kids (6 ao 10) > Menino > Camiseta
+- Linha Kids (6 ao 10) > Menino > Conjunto
+- Linha Primeiros Passos (1 ao 4) > Menina > Blusinha
+- Linha Primeiros Passos (1 ao 4) > Menina > Conjunto
+- Linha Primeiros Passos (1 ao 4) > Menina > Saia
+- Linha Primeiros Passos (1 ao 4) > Menino > Camiseta
+- Linha Primeiros Passos (1 ao 4) > Menino > Conjunto
+- Linha Teen (12 ao 18) > Menina > Blusinha
+- Linha Teen (12 ao 18) > Menina > Conjunto
+- Linha Teen (12 ao 18) > Menino > Bermuda
+- Linha Teen (12 ao 18) > Menino > Camiseta
+- Linha Teen (12 ao 18) > Menino > Conjunto
