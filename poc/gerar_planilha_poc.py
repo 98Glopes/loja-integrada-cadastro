@@ -18,7 +18,7 @@ from pathlib import Path
 
 import openpyxl
 
-EXPORTACAO_PADRAO = Path("docs/produtos-2026-09-10-03-25-78670adce0a94f6.xlsx")
+EXPORTACAO_PADRAO = Path("docs/brutos/produtos-2026-09-10-03-25-78670adce0a94f6.xlsx")
 SAIDA_PADRAO = Path("poc/saida")
 TOTAL_COLUNAS_ESPERADO = 54
 

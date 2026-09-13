@@ -6,7 +6,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CLI em Python para cadastro de produtos em massa na plataforma **Loja Integrada**. Recebe uma planilha de produtos de e-commerce, gera descrições e realiza os cadastros na plataforma. O código deve ser estruturado para evoluir, sem reescrita, de CLI para serviço web.
 
-Estado atual: esqueleto de pastas e toolchain criados, sem casos de uso implementados. Este arquivo registra os **requisitos não funcionais** e as decisões de arquitetura que toda contribuição deve respeitar.
+Estado atual: esqueleto de pastas e toolchain criados, sem casos de uso implementados.
+Arquitetura definida e backlog planejado (13/09/2026). Este arquivo registra os **requisitos
+não funcionais**; a arquitetura funcional está em `docs/ARQUITETURA.md` e as tasks em
+`docs/tasks/` — leia ambos antes de implementar qualquer coisa.
+
+Fluxo de trabalho: uma task de `docs/tasks/` por sessão, na ordem do `docs/tasks/README.md`,
+seguindo o ciclo abaixo. Nenhuma task deve decidir regra de negócio nova sozinha — registre e
+pergunte.
+
+## Ciclo spec → código → spec (obrigatório em toda task)
+
+Gatilho: qualquer pedido de "implementar a task NN" ou mudança funcional. Uma task só está
+concluída quando os passos 4 e 5 foram feitos — código sem spec não conta como pronto.
+
+1. **Ler**: `docs/ARQUITETURA.md` (seções citadas na task, §10 e §16), o arquivo da task,
+   `docs/specs/README.md`, as specs vivas dos módulos que a task toca (`docs/specs/<modulo>.md`)
+   e as specs das tasks de que ela depende (`docs/specs/tasks/`).
+2. **Confrontar** task × arquitetura × specs vivas. Divergência, ambiguidade ou regra de
+   negócio nova → parar e perguntar antes de codar.
+3. **Implementar e verificar**: `ruff check . && ruff format . && mypy src && pytest`, depois
+   `/python-clean-architecture:check-quality` sobre a mudança.
+4. **Registrar** (todos, com os templates de `docs/specs/README.md`):
+   - `docs/specs/tasks/NN-<nome>.md` — spec *as-built* da task: o que existe, com assinaturas,
+     nomes de arquivo e comandos reais; seção "Desvios e decisões" obrigatória ("nenhum" se
+     não houver).
+   - `docs/specs/<modulo>.md` — criar ou atualizar a spec viva de cada módulo tocado.
+   - `docs/ARQUITETURA.md` — reescrever as seções afetadas para refletir o implementado;
+     marcar itens com 🔲 planejado / ✅ implementado (task NN); §10 com os arquivos reais; §14
+     com riscos resolvidos; decisão que mudou → nova entrada em §16 (ADR: contexto, decisão,
+     consequência, task). Nunca marcar ✅ o que não tem teste passando.
+   - `docs/tasks/README.md` — status `concluída` e link para a spec da task.
+5. **Commitar** automaticamente: um commit por task, título `Task NN: <resultado em uma
+   linha>`, corpo com `Spec: docs/specs/tasks/NN-<nome>.md`, módulos atualizados e seções da
+   arquitetura alteradas, mais as linhas de atribuição da sessão.
+6. **Resumir** ao usuário: o que foi entregue, desvios, o que mudou na arquitetura, próxima
+   task.
 
 ## Comandos
 
@@ -76,9 +111,18 @@ Referências oficiais da Loja Integrada sobre cadastro massivo (fonte de verdade
 - [Como cadastrar produtos simples de forma massiva](https://ajuda.lojaintegrada.com.br/pt-BR/articles/5360633-como-cadastrar-produtos-simples-de-forma-massiva)
 - [Como cadastrar produtos com variações de forma massiva](https://ajuda.lojaintegrada.com.br/pt-BR/articles/5360649-como-cadastrar-produtos-com-variacoes-de-forma-massiva)
 
-**Formato validado da planilha:** `docs/regras-planilha-loja-integrada.md` — fonte de verdade do
-layout de saída (54 colunas, pai/filha, grades de cor e tamanho), provado por importação real na
-loja em 13/09/2026 (`poc/`). O layout vem da **exportação real** da loja, não do
-`planilha-modelo.xlsx` genérico (49 colunas, sem `grade-tamanho-infantil`).
+**Documentos canônicos (versionados em `docs/`):**
 
-Material de apoio local em `docs/` (planilha modelo, exportação real de produtos, perfis de marca, dados mestre).
+- `docs/ARQUITETURA.md` — fonte de verdade do sistema: decisões, fluxo, planilha de entrada,
+  fotos/R2, agentes de IA, saída, estado, verificação, arquitetura de código, configuração.
+- `docs/regras-planilha-loja-integrada.md` — formato de saída (54 colunas, pai/filha, grades),
+  provado por importação real em 13/09/2026 (`poc/`). O layout vem da **exportação real** da
+  loja, não do `planilha-modelo.xlsx` genérico (49 colunas, sem `grade-tamanho-infantil`).
+- `docs/tasks/` — backlog de implementação (uma task por arquivo, índice em `README.md`).
+- `docs/specs/` — o que **existe**: spec viva por módulo (`<modulo>.md`) e spec as-built por
+  task (`tasks/NN-<nome>.md`); templates e mapa de módulos em `docs/specs/README.md`.
+
+**Material bruto (não versionado, `docs/brutos/`):** skill original de copywriting (`SKILL.md`),
+`brand_profiles.md`, `dados_mestre.md`, exportação real do catálogo (`produtos-*.xlsx`),
+`planilha-modelo.xlsx`, notas do suporte. Servem de insumo para as tasks; quando divergirem de
+`ARQUITETURA.md`, vale a arquitetura.

@@ -222,5 +222,9 @@ poc/fotos_input/
 poc/fotos/
 poc/saida/*.html
 
-# Material de negócio local (exportação real do catálogo, modelo, regras) — não versionar
-docs/
+# Material bruto de negócio (exportações reais, planilha-modelo, skill original) — não versionar.
+# docs/*.md canônicos (arquitetura, regras, tasks) SÃO versionados.
+docs/brutos/
+
+# Workspaces de lotes processados (estado, fotos comprimidas, planilhas geradas)
+lotes/
