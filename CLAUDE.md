@@ -76,4 +76,9 @@ Referências oficiais da Loja Integrada sobre cadastro massivo (fonte de verdade
 - [Como cadastrar produtos simples de forma massiva](https://ajuda.lojaintegrada.com.br/pt-BR/articles/5360633-como-cadastrar-produtos-simples-de-forma-massiva)
 - [Como cadastrar produtos com variações de forma massiva](https://ajuda.lojaintegrada.com.br/pt-BR/articles/5360649-como-cadastrar-produtos-com-variacoes-de-forma-massiva)
 
+**Formato validado da planilha:** `docs/regras-planilha-loja-integrada.md` — fonte de verdade do
+layout de saída (54 colunas, pai/filha, grades de cor e tamanho), provado por importação real na
+loja em 13/09/2026 (`poc/`). O layout vem da **exportação real** da loja, não do
+`planilha-modelo.xlsx` genérico (49 colunas, sem `grade-tamanho-infantil`).
+
 Material de apoio local em `docs/` (planilha modelo, exportação real de produtos, perfis de marca, dados mestre).

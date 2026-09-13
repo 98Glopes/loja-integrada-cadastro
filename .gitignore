@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# POC: fotos brutas (hospedadas no registry) e dumps HTML de verificação
+poc/fotos_input/
+poc/fotos/
+poc/saida/*.html
+
+# Material de negócio local (exportação real do catálogo, modelo, regras) — não versionar
+docs/
