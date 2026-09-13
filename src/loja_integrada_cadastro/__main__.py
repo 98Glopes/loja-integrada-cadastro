@@ -1,4 +1,4 @@
-from loja_integrada_cadastro.adapters.inbound.cli.aplicacao_cli import AplicacaoCli
+from loja_integrada_cadastro.cli import AplicacaoCli
 
 
 def main() -> None:
