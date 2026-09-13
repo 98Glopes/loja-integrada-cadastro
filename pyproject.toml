@@ -9,6 +9,7 @@ description = "CLI para cadastro de produtos em massa na plataforma Loja Integra
 requires-python = ">=3.12"
 dependencies = [
     "openpyxl>=3.1",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +41,8 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "ANN"]
+# Exceções de domínio seguem a convenção `Erro<Nome>` (ARQUITETURA.md §10), não o sufixo Error.
+ignore = ["N818"]
 
 [tool.mypy]
 strict = true

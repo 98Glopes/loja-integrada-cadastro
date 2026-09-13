@@ -2,7 +2,7 @@ from loja_integrada_cadastro.cli import AplicacaoCli
 
 
 def main() -> None:
-    AplicacaoCli().executar()
+    raise SystemExit(AplicacaoCli().executar())
 
 
 if __name__ == "__main__":

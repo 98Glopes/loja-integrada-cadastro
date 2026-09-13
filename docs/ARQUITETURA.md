@@ -405,7 +405,9 @@ src/loja_integrada_cadastro/
     🔲 layout_planilha_loja_integrada.py   as 54 colunas, na ordem
     🔲 regras_texto.py               limites e validações de regra dos 4 campos (puras)
     🔲 slug.py                       slugificação (sem acento, minúsculas, hífens)
-    🔲 exceptions/                   ErroValidacaoEntrada, ErroProcessamentoImagem, ErroPublicacaoImagem,
+    exceptions/
+      ✅ erro_configuracao.py        ErroConfiguracao(variavel, valor_invalido) (task 01)
+      🔲                             ErroValidacaoEntrada, ErroProcessamentoImagem, ErroPublicacaoImagem,
                                   ErroGeracaoTexto, ErroConsultaLoja, ErroEstadoLote
   🔲 services/
     🔲 ports/
@@ -440,15 +442,16 @@ src/loja_integrada_cadastro/
     🔲 repositorio_estado_lote_json.py
     🔲 escritor_planilha_saida_openpyxl.py
     🔲 consulta_loja_http.py                  httpx + selectolax
-  🔲 config/
-    🔲 configuracao.py                        Configuracao (dataclass) lida de env/.env
+  config/
+    ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
+    ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
     🔲 composicao.py                          montar_processador_lote(), montar_verificador() (composition root)
   🔲 recursos/                                §6.4
-  🔲 cli.py                                   subcomandos: modelo-entrada | validar | processar | verificar
+  ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada | validar | processar | verificar (task 01; todos "não implementado", código 2)
 ```
 
-Todos os itens estão 🔲 planejados em 13/09/2026; cada task troca para ✅ o que entregou e
-ajusta nomes/arquivos para os reais.
+Cada task troca para ✅ o que entregou e ajusta nomes/arquivos para os reais. Detalhe do que
+existe: `docs/specs/`.
 
 Regras que as tasks devem respeitar:
 
@@ -460,15 +463,22 @@ Regras que as tasks devem respeitar:
   ser atualizado etapa a etapa) — mutação apenas via métodos com nome de intenção
   (`registrar_fotos`, `registrar_textos`, `reprovar`…).
 
-Dependências a adicionar quando a task correspondente chegar: `anthropic`, `pydantic`,
-`jinja2`, `pyyaml`, `pillow`, `pillow-heif`, `boto3`, `httpx`, `selectolax`, `python-dotenv`
-(+ stubs para mypy: `types-PyYAML`, `boto3-stubs[s3]`).
+Dependências instaladas: `openpyxl`, `python-dotenv` (task 01). A adicionar quando a task
+correspondente chegar: `anthropic`, `pydantic`, `jinja2`, `pyyaml`, `pillow`, `pillow-heif`,
+`boto3`, `httpx`, `selectolax` (+ stubs para mypy: `types-PyYAML`, `boto3-stubs[s3]`).
+
+Convenção de lint: exceções de domínio chamam-se `Erro<Nome>`; a regra ruff `N818` (sufixo
+`Error`) está desligada no `pyproject.toml` por isso.
 
 ## 11. Configuração e segredos
 
-`Configuracao` é montada a partir de variáveis de ambiente (arquivo `.env` na raiz, carregado
-com `python-dotenv`; `.env` está no `.gitignore`; um `.env.exemplo` versionado documenta as
-chaves).
+✅ Implementado (task 01) — spec viva em `docs/specs/configuracao-cli.md`.
+
+`Configuracao` (`config/configuracao.py`, frozen dataclass) é montada por
+`Configuracao.do_ambiente()` a partir de variáveis de ambiente: `python-dotenv` carrega o `.env`
+do **diretório corrente** (se existir, sem sobrescrever variáveis já definidas); `.env` está no
+`.gitignore`; `.env.exemplo` versionado documenta as chaves. Variável ausente ou vazia usa o
+padrão; valor não conversível falha com `ErroConfiguracao` nomeando variável e valor.
 
 | Variável | Uso | Padrão |
 |---|---|---|
@@ -479,12 +489,16 @@ chaves).
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | credenciais R2 | — |
 | `R2_URL_PUBLICA` | base das URLs públicas (ex.: `https://bucket.gleite.com`) | — |
 | `IMAGEM_LADO_MAX_PX`, `IMAGEM_TAMANHO_MAX_KB` | processamento | `1600`, `500` |
-| `PRODUTO_ATIVO` | `S`/`N` | `S` |
-| `PESO_KG`, `ALTURA_CM`, `LARGURA_CM`, `COMPRIMENTO_CM` | padrões físicos | `0.1`, `4`, `22`, `22` |
+| `PRODUTO_ATIVO` | `S`/`N` (outro valor é erro) | `S` |
+| `PESO_KG`, `ALTURA_CM`, `LARGURA_CM`, `COMPRIMENTO_CM` | padrões físicos (`Decimal`) | `0.1`, `4`, `22`, `22` |
 | `LOJA_URL` | site público para `verificar` | `https://www.kmilaamodas.com.br` |
 | `LOTES_DIR` | raiz dos workspaces | `./lotes` |
 
-A CLI falha cedo e com mensagem clara se uma variável obrigatória do comando faltar.
+Variáveis obrigatórias só são cobradas pelo comando que as usa: `exigir_anthropic()` devolve a
+chave ou lança `ErroConfiguracao("ANTHROPIC_API_KEY")`; `exigir_r2()` lança na primeira `R2_*`
+ausente. A CLI falha cedo e com mensagem clara se uma variável obrigatória do comando faltar
+(tradução de `ErroConfiguracao` em mensagem/código de saída entra com o primeiro comando que
+consumir `Configuracao`).
 
 ## 12. Testes e evals
 

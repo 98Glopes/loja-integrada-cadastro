@@ -16,7 +16,7 @@ branco.
 
 | Módulo (`docs/specs/<modulo>.md`) | Cobre (§10 da arquitetura) | Tasks | Spec |
 |---|---|---|---|
-| `configuracao-cli` | `config/configuracao.py`, `cli.py`, `.env.exemplo`, subcomandos | 01, 15, 17 | — |
+| `configuracao-cli` | `config/configuracao.py`, `config/leitor_ambiente.py`, `cli.py`, `.env.exemplo`, subcomandos | 01, 15, 17 | [spec](configuracao-cli.md) |
 | `dados-mestre-recursos` | `models/dados_mestre.py`, `infra/carregador_recursos.py`, `recursos/dados_mestre.yaml`, `scripts/extrair_dados_mestre.py` | 02 | — |
 | `planilha-entrada` | `models/produto_entrada.py`, `variacao_entrada.py`, port `LeitorPlanilhaEntrada`, leitor e gerador de modelo openpyxl | 04 | — |
 | `validacao` | `services/validador_entrada.py`, `models/resultado_validacao.py`, port `CatalogoFotos` e implementação em diretório | 05 | — |
