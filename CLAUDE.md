@@ -67,3 +67,13 @@ Por que isso importa aqui: a evolução para serviço web deve consistir apenas 
 ## Plugin habilitado
 
 `python-clean-architecture` (`.claude/settings.local.json`) — use `/python-clean-architecture:review-architecture` e `/python-clean-architecture:check-quality` antes de concluir mudanças estruturais.
+
+## Documentação de negócio
+
+Referências oficiais da Loja Integrada sobre cadastro massivo (fonte de verdade para o formato da planilha e regras de importação):
+
+- [Central de ajuda da Loja Integrada](https://ajuda.lojaintegrada.com.br/pt-BR/)
+- [Como cadastrar produtos simples de forma massiva](https://ajuda.lojaintegrada.com.br/pt-BR/articles/5360633-como-cadastrar-produtos-simples-de-forma-massiva)
+- [Como cadastrar produtos com variações de forma massiva](https://ajuda.lojaintegrada.com.br/pt-BR/articles/5360649-como-cadastrar-produtos-com-variacoes-de-forma-massiva)
+
+Material de apoio local em `docs/` (planilha modelo, exportação real de produtos, perfis de marca, dados mestre).
