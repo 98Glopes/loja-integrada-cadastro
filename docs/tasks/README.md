@@ -22,7 +22,7 @@ contrato, prompt engineering e revisão final; **sonnet** para código determin�
 | 01 | [Fundação: configuração, CLI com subcomandos](01-fundacao-configuracao-cli.md) | — | sonnet | concluída | [spec](../specs/tasks/01-fundacao-configuracao-cli.md) — 4 subcomandos retornam 2; `Configuracao.do_ambiente()` com padrões de §11; 26 testes |
 | 02 | [Dados mestre e carregador de recursos](02-dados-mestre-recursos.md) | 01 | sonnet | concluída | [spec](../specs/tasks/02-dados-mestre-recursos.md) — YAML com 413 cores/17 tamanhos/45 categorias extraído do `.xlsx` real; `DadosMestre`/`CarregadorRecursos` batem com o critério de aceite; 52 testes |
 | 03 | [Spike: a importação cria valor de grade?](03-spike-grade-importacao.md) | — | sonnet | concluída | [spec](../specs/tasks/03-spike-grade-importacao.md) — importação não cria valor novo de grade e não ignora caixa (`beige`≠`Beige`); rejeita a linha com erro explícito; validação estrita de `cor_valida` confirmada sem mudança |
-| 04 | [Planilha de entrada: modelo, leitor e `modelo-entrada`](04-planilha-entrada.md) | 02 | sonnet | pendente | |
+| 04 | [Planilha de entrada: modelo, leitor e `modelo-entrada`](04-planilha-entrada.md) | 02 | sonnet | concluída | [spec](../specs/tasks/04-planilha-entrada.md) — 14 colunas (faixa-tamanho virou campo de entrada, ver ADR-005); leitor acumula erros de linha; modelo gerado com listas suspensas; round-trip com 2 produtos confere; 82 testes |
 | 05 | [Validador de entrada, catálogo de fotos e `validar`](05-validador-entrada.md) | 03, 04 | sonnet | pendente | |
 | 06 | [Workspace e estado do lote](06-estado-lote.md) | 05 | sonnet | pendente | |
 | 07 | [Pipeline de fotos: nomeação e compressão](07-pipeline-fotos.md) | 06 | sonnet | pendente | |

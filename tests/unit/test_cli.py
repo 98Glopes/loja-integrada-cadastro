@@ -20,12 +20,11 @@ def test_help_lista_os_quatro_subcomandos(capsys: pytest.CaptureFixture[str]) ->
 @pytest.mark.parametrize(
     "argumentos",
     [
-        ["modelo-entrada"],
         ["validar", "--planilha", "p.xlsx", "--fotos", "fotos"],
         ["processar", "--planilha", "p.xlsx", "--fotos", "fotos", "--lote", "lote-1"],
         ["verificar", "--lote", "lote-1"],
     ],
-    ids=SUBCOMANDOS,
+    ids=SUBCOMANDOS[1:],
 )
 def test_subcomando_retorna_2_e_avisa_nao_implementado(
     argumentos: list[str], capsys: pytest.CaptureFixture[str]
@@ -34,6 +33,18 @@ def test_subcomando_retorna_2_e_avisa_nao_implementado(
 
     assert codigo == 2
     assert f"{argumentos[0]}: não implementado" in capsys.readouterr().err
+
+
+def test_modelo_entrada_gera_arquivo_no_destino(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    destino = tmp_path / "modelo-entrada.xlsx"
+
+    codigo = AplicacaoCli().executar(["modelo-entrada", "--destino", str(destino)])
+
+    assert codigo == 0
+    assert destino.exists()
+    assert f"modelo-entrada: gerado em {destino}" in capsys.readouterr().out
 
 
 def test_processar_parseia_todos_os_argumentos() -> None:

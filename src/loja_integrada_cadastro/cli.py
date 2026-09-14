@@ -6,12 +6,16 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from loja_integrada_cadastro.config.composicao import montar_gerador_modelo_entrada
+from loja_integrada_cadastro.models.exceptions.erro_recursos import ErroRecursos
+
 if TYPE_CHECKING:
     from argparse import _SubParsersAction
 
     Subcomandos = _SubParsersAction[ArgumentParser]
 
 CODIGO_NAO_IMPLEMENTADO = 2
+CODIGO_ERRO_NEGOCIO = 1
 
 
 class AplicacaoCli:
@@ -91,7 +95,13 @@ class AplicacaoCli:
         parser.add_argument("--fotos", type=Path, required=True, help="pasta raiz das fotos")
 
     def _modelo_entrada(self, opcoes: Namespace) -> int:
-        return self._nao_implementado("modelo-entrada")
+        try:
+            montar_gerador_modelo_entrada().gerar(opcoes.destino)
+        except ErroRecursos as erro:
+            print(f"modelo-entrada: {erro}", file=sys.stderr)
+            return CODIGO_ERRO_NEGOCIO
+        print(f"modelo-entrada: gerado em {opcoes.destino}")
+        return 0
 
     def _validar(self, opcoes: Namespace) -> int:
         return self._nao_implementado("validar")
