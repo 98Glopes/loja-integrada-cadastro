@@ -20,7 +20,7 @@ branco.
 | `dados-mestre-recursos` | `models/dados_mestre.py`, `infra/carregador_recursos.py`, `recursos/dados_mestre.yaml`, `scripts/extrair_dados_mestre.py` | 02 | [spec](dados-mestre-recursos.md) |
 | `planilha-entrada` | `models/produto_entrada.py`, `variacao_entrada.py`, port `LeitorPlanilhaEntrada`, leitor e gerador de modelo openpyxl | 04 | [spec](planilha-entrada.md) |
 | `validacao` | `services/validador_entrada.py`, `models/resultado_validacao.py`, port `CatalogoFotos` e implementação em diretório | 05 | [spec](validacao.md) |
-| `estado-lote` | `models/estado_produto.py`, `status_produto.py`, port `RepositorioEstadoLote`, implementação JSON, política de reexecução | 06 | — |
+| `estado-lote` | `models/estado_produto.py`, `status_produto.py`, port `RepositorioEstadoLote`, implementação JSON, política de reexecução | 06 | [spec](estado-lote.md) |
 | `fotos` | `models/slug.py`, `foto_produto.py`, `nomeador_fotos.py`, port `ProcessadorImagem` (Pillow), `services/pipeline_fotos.py` | 07 | — |
 | `armazenamento-r2` | port `ArmazenamentoImagens`, `infra/armazenamento_imagens_r2.py` (+ diretório) | 07, 08 | — |
 | `llm-cliente-prompts` | ports `ClienteLlm` e `RepositorioPrompts`, `infra/cliente_llm_anthropic.py`, `esquemas_llm.py`, `repositorio_prompts_jinja.py`, `recursos/precos_llm.yaml` | 09 | — |
