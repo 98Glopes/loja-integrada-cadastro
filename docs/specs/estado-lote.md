@@ -3,7 +3,7 @@
 **Responsabilidade:** persistir o progresso de cada produto do lote (`EstadoProduto`) para que
 uma reexecução pule o que está pronto e retome do ponto de falha, sem repetir etapas caras
 (LLM, upload de fotos).
-**Estado:** implementado pela task 06 · última atualização 2026-09-14 (task 06)
+**Estado:** implementado pelas tasks 06, 07 · última atualização 2026-09-14 (task 07)
 
 ## Arquivos
 
@@ -38,7 +38,7 @@ class EstadoProduto:
     entrada: ProdutoEntrada
     hash_entrada: str
     validacao: ResultadoValidacao
-    fotos: tuple[Mapping[str, object], ...] = ()
+    fotos: tuple[FotoProduto, ...] = ()   # tipado desde a task 07 (models/foto_produto.py)
     imagens_pai: tuple[str, ...] = ()
     textos: Mapping[str, str] | None = None
     tentativas: tuple[Mapping[str, object], ...] = ()
@@ -48,7 +48,7 @@ class EstadoProduto:
 
     @classmethod
     def registrar_validacao(sku_pai, entrada, hash_entrada, resultado) -> EstadoProduto: ...
-    def registrar_fotos(fotos, imagens_pai) -> None: ...
+    def registrar_fotos(fotos: tuple[FotoProduto, ...], imagens_pai) -> None: ...
     def registrar_erro_fotos() -> None: ...
     def registrar_tentativa(tentativa, custo_usd=Decimal("0")) -> None: ...
     def registrar_textos(textos) -> None: ...
@@ -140,11 +140,12 @@ JSON corrompido ou com campo faltando vira `ErroEstadoLote` (nunca deixa vazar
 Serialização (funções privadas do módulo, `_para_dict`/`_de_dict`): `StatusProduto` ↔ `.value`;
 `Decimal` (`preco` das variações, `custo_usd_estimado`) ↔ `str`; `datetime` (`atualizado_em`) ↔
 ISO 8601 (`datetime.fromisoformat`); `ProdutoEntrada`/`VariacaoEntrada`/`ResultadoValidacao`/
-`ProblemaValidacao` ↔ dicts aninhados montados campo a campo (não usa `dataclasses.asdict`
-genérico, para controlar a conversão de `Decimal` dentro de `VariacaoEntrada.preco`). Os campos
-ainda sem tipo definido (`fotos`, `textos`, `tentativas`, `verificacao`) são serializados como
-JSON puro (dict/list/str/int/float/bool/None) — não suportam `Decimal`/`datetime` aninhados
-enquanto não tiverem um tipo próprio (tasks 07/11/13/17).
+`ProblemaValidacao`/`FotoProduto` ↔ dicts aninhados montados campo a campo (não usa
+`dataclasses.asdict` genérico, para controlar a conversão de `Decimal`/`Path` dentro dos campos
+compostos — `FotoProduto.arquivo_origem: Path` ↔ `str`, `_foto_para_dict`/`_foto_de_dict`, task
+07). Os campos ainda sem tipo definido (`textos`, `tentativas`, `verificacao`) continuam
+serializados como JSON puro (dict/list/str/int/float/bool/None) enquanto não tiverem um tipo
+próprio (tasks 11/13/17).
 
 **`PoliticaReexecucao.decidir`** — hash da entrada diferente do salvo sempre vence
 (`recomecar`, ponto de partida `validar`); com hash igual, `refazer_fotos` tem prioridade sobre
@@ -159,11 +160,12 @@ a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem 
   task 15. Este módulo só decide/persiste, não executa nada.
 - Nenhum wiring em `config/composicao.py` ou `cli.py` ainda — nenhum subcomando usa este módulo
   até a task 15 (`processar`).
-- `fotos`/`textos`/`tentativas`/`verificacao` ficam com tipo mínimo (`Mapping[str, object]`/
-  `Mapping[str, str]`); as tasks 07 (`FotoProduto`), 11/13 (`TextosProduto`, tentativa
-  estruturada) e 17 (verificação estruturada) os substituem por dataclasses próprias — quando
-  isso acontecer, a serialização em `infra/repositorio_estado_lote_json.py` precisa ser
-  atualizada junto.
+- `textos`/`tentativas`/`verificacao` ainda ficam com tipo mínimo (`Mapping[str, object]`/
+  `Mapping[str, str]`); `fotos` já foi tipado (`FotoProduto`, task 07). As tasks 11/13
+  (`TextosProduto`, tentativa estruturada) e 17 (verificação estruturada) substituem os
+  restantes por dataclasses próprias — quando isso acontecer, a serialização em
+  `infra/repositorio_estado_lote_json.py` precisa ser atualizada junto (mesmo padrão de
+  `_foto_para_dict`/`_foto_de_dict` usado para `fotos`).
 - `EstadoProduto` é mutável e nada impede reatribuir um campo por fora dos métodos em Python —
   a garantia é de convenção/revisão de código, não do type checker.
 
@@ -178,11 +180,12 @@ a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem 
   igual, `pronto` com cada combinação de `--refazer-textos`/`--refazer-fotos`).
 - `tests/unit/infra/test_repositorio_estado_lote_json.py` (`tmp_path`) — round-trip
   `salvar`→`carregar` de um `EstadoProduto` com todos os campos preenchidos (inclusive `Decimal`
-  em `preco` e `custo_usd_estimado`, e `datetime` em `atualizado_em`), `carregar` de SKU
-  inexistente devolve `None`, `listar` traz todos os salvos, construtor cria a árvore de pastas,
-  `copiar_planilha_entrada` copia o arquivo, escrita atômica não deixa `.tmp` para trás,
-  `ErroEstadoLote` para JSON corrompido e para JSON com campo faltando, `salvar` sobrescrevendo
-  um estado existente, status persistido como o enum correto.
+  em `preco` e `custo_usd_estimado`, `datetime` em `atualizado_em`, e um `FotoProduto` real com
+  `Path` em `arquivo_origem`), `carregar` de SKU inexistente devolve `None`, `listar` traz todos
+  os salvos, construtor cria a árvore de pastas, `copiar_planilha_entrada` copia o arquivo,
+  escrita atômica não deixa `.tmp` para trás, `ErroEstadoLote` para JSON corrompido e para JSON
+  com campo faltando, `salvar` sobrescrevendo um estado existente, status persistido como o
+  enum correto.
 - Nenhum fake de `RepositorioEstadoLote` extraído ainda — sem um segundo consumidor até aqui
   (a task 15 provavelmente precisará de um `RepositorioEstadoLoteFake` em memória para testar a
   orquestração sem tocar disco).
@@ -194,3 +197,8 @@ a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem 
   `RepositorioEstadoLoteJson`, `PoliticaReexecucao`. Ver "Desvios e decisões" na spec as-built
   (`docs/specs/tasks/06-estado-lote.md`) para os pontos em que o texto da task não especificava
   o suficiente para codar sem decisão de implementação.
+- Task 07 (2026-09-14): `fotos` deixa de ser `tuple[Mapping[str, object], ...]` e passa a ser
+  `tuple[FotoProduto, ...]` (`models/foto_produto.py`); `registrar_fotos` tipado de acordo;
+  serialização em `infra/repositorio_estado_lote_json.py` ganhou
+  `_foto_para_dict`/`_foto_de_dict`. `registrar_erro_fotos()` confirmado sem parâmetro de
+  motivo (ver `docs/specs/tasks/07-pipeline-fotos.md`).

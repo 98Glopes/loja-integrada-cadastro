@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -7,6 +8,7 @@ from loja_integrada_cadastro.models.estado_produto import EstadoProduto
 from loja_integrada_cadastro.models.exceptions.erro_transicao_estado_invalida import (
     ErroTransicaoEstadoInvalida,
 )
+from loja_integrada_cadastro.models.foto_produto import FotoProduto
 from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
 from loja_integrada_cadastro.models.resultado_validacao import (
     ProblemaValidacao,
@@ -44,9 +46,22 @@ def _validado() -> EstadoProduto:
     return EstadoProduto.registrar_validacao("3254002", _entrada(), "hash-1", _APROVADO)
 
 
+def _foto(cor: str = "Beige", ordem: int = 1, nome: str = "foto-1.jpg") -> FotoProduto:
+    return FotoProduto(
+        sku_pai="3254002",
+        cor=cor,
+        ordem=ordem,
+        arquivo_origem=Path(f"fotos/3254002/{cor}/{nome}"),
+        nome=nome,
+        chave=f"produtos/3254002/{nome}",
+        url="url-1",
+        bytes=1000,
+    )
+
+
 def _fotos_publicadas() -> EstadoProduto:
     estado = _validado()
-    estado.registrar_fotos(fotos=({"cor": "Beige", "nome": "foto-1.jpg"},), imagens_pai=("url-1",))
+    estado.registrar_fotos(fotos=(_foto(),), imagens_pai=("url-1",))
     return estado
 
 
@@ -75,11 +90,12 @@ class TestRegistrarFotos:
     )
     def test_transicoes_validas(self, estado_inicial: Callable[[], EstadoProduto]) -> None:
         estado = estado_inicial()
+        foto = _foto()
 
-        estado.registrar_fotos(fotos=({"cor": "Beige"},), imagens_pai=("url-1",))
+        estado.registrar_fotos(fotos=(foto,), imagens_pai=("url-1",))
 
         assert estado.status is StatusProduto.FOTOS_PUBLICADAS
-        assert estado.fotos == ({"cor": "Beige"},)
+        assert estado.fotos == (foto,)
         assert estado.imagens_pai == ("url-1",)
 
     def test_transicao_invalida_a_partir_de_reprovado_validacao(self) -> None:
