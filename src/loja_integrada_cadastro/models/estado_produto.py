@@ -8,6 +8,7 @@ from decimal import Decimal
 from loja_integrada_cadastro.models.exceptions.erro_transicao_estado_invalida import (
     ErroTransicaoEstadoInvalida,
 )
+from loja_integrada_cadastro.models.foto_produto import FotoProduto
 from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
 from loja_integrada_cadastro.models.resultado_validacao import ResultadoValidacao
 from loja_integrada_cadastro.models.status_produto import StatusProduto
@@ -32,7 +33,7 @@ class EstadoProduto:
     entrada: ProdutoEntrada
     hash_entrada: str
     validacao: ResultadoValidacao
-    fotos: tuple[Mapping[str, object], ...] = ()
+    fotos: tuple[FotoProduto, ...] = ()
     imagens_pai: tuple[str, ...] = ()
     textos: Mapping[str, str] | None = None
     tentativas: tuple[Mapping[str, object], ...] = ()
@@ -58,9 +59,7 @@ class EstadoProduto:
             validacao=resultado,
         )
 
-    def registrar_fotos(
-        self, fotos: tuple[Mapping[str, object], ...], imagens_pai: tuple[str, ...]
-    ) -> None:
+    def registrar_fotos(self, fotos: tuple[FotoProduto, ...], imagens_pai: tuple[str, ...]) -> None:
         """Registra o sucesso da etapa 2 (fotos comprimidas e publicadas no R2)."""
         self._exigir_origem("registrar_fotos", _ORIGENS_ETAPA_FOTOS)
         self.fotos = fotos

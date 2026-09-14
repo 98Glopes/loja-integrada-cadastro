@@ -174,6 +174,8 @@ correspondente na planilha gera aviso (não bloqueia).
 
 ### 5.2 Nomeação (regra determinística)
 
+✅ Implementado (task 07, `models/slug.py` + `models/nomeador_fotos.py`).
+
 `<marca>-<tipo-peca>-<nome-fornecedor>-<cor>-<n>.jpg`, tudo slugificado (minúsculas, sem
 acento, hífens), `n` = posição do arquivo na ordem alfabética dentro da subpasta (1, 2, 3…).
 Tokens do `tipo-peca` repetidos no início de `nome-fornecedor` são removidos; o nome é truncado
@@ -187,25 +189,40 @@ depende da etapa de textos.
 
 ### 5.3 Processamento e publicação
 
+✅ Passos 1–4 implementados (task 07, `PipelineFotos` + `ProcessadorImagemPillow`); 5–6 (R2
+real) ficam para a task 08.
+
 1. Abrir com Pillow (`pillow-heif` registra HEIC), aplicar orientação EXIF, converter para RGB.
 2. Redimensionar para lado maior ≤ 1600 px.
 3. Salvar JPEG progressivo sem EXIF; começar em qualidade 85 e reduzir em passos de 5 até
-   ficar < 500 KB (piso 60; se ainda passar, reduz o lado maior para 1200 px).
-4. Guardar cópia em `lotes/<lote>/fotos-processadas/<sku-pai>/<nome>.jpg` (cache local e
-   auditoria).
+   ficar < 500 KB (piso 60; se ainda passar, reduz o lado maior para 1200 px **e reinicia o
+   loop de qualidade em 85** nesse novo tamanho). Caso extremo (mesmo em 1200 px/qualidade 60
+   o arquivo ainda excede o limite): aceita o resultado sem erro (best-effort) — falhar a foto
+   inteira por poucos KB acima do alvo é pior que publicar levemente acima do limite.
+4. Guardar cópia em `lotes/<lote>/fotos-processadas/produtos/<sku-pai>/<nome>.jpg` — o mesmo
+   caminho relativo (`produtos/<sku-pai>/<nome>.jpg`) é a `chave` usada depois para publicar no
+   R2 (task 08), então o armazenamento local já espelha a estrutura de chaves do bucket.
 5. Publicar no R2 com chave `produtos/<sku-pai>/<nome>.jpg`, `Content-Type: image/jpeg`,
    `Cache-Control: public, max-age=31536000`. Sempre sobrescreve.
 6. URL pública: `<R2_URL_PUBLICA>/produtos/<sku-pai>/<nome>.jpg`. Após o upload, um `HEAD`
    confirma `200 image/jpeg` (a POC teve uma falha silenciosa de imagem na importação; a URL
    precisa estar acessível antes de ir para a planilha).
 
+Se uma foto falha ao processar (arquivo corrompido, formato não suportado), o pipeline aborta
+o produto inteiro: nenhuma foto parcial é publicada/contada, o produto vai para `erro-fotos` e
+a exceção (`ErroProcessamentoImagem`) se propaga — decisão confirmada com o usuário na task 07,
+fail-fast em vez de best-effort por foto, para não repetir a falha silenciosa de imagem da POC.
+
 Seleção das até 5 imagens do pai (a Loja Integrada só aceita imagem no pai): primeiro a foto
 `-1` de cada cor na ordem da planilha, depois as `-2` de cada cor, e assim por diante, até 5.
 Assim toda cor aparece antes de qualquer cor ter duas fotos. As demais ficam publicadas no R2
-sem uso (custo desprezível) e listadas no relatório.
+sem uso (custo desprezível) e listadas no relatório. ✅ Implementado (task 07,
+`SeletorImagensPai`).
 
 Cloudflare R2 é compatível com S3: o conector usa `boto3` com `endpoint_url =
-https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, região `auto`.
+https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, região `auto`. 🔲 Task 08 — nesta task, o port
+`ArmazenamentoImagens` é implementado por `ArmazenamentoImagensDiretorio`, que grava em
+`fotos-processadas/` e devolve URL `file://` local.
 
 ## 6. Geração de textos por IA
 
@@ -353,7 +370,7 @@ sku_pai, status: validado | reprovado-validacao | erro-fotos | fotos-publicadas 
 entrada: ProdutoEntrada (normalizado)
 hash_entrada
 validacao: {problemas: [...], avisos: [...]}
-fotos: [{cor, ordem, arquivo_origem, nome, chave_r2, url, bytes, publicada_em}]   # tipo mínimo até a task 07
+fotos: tuple[FotoProduto, ...]   # {sku_pai, cor, ordem, arquivo_origem, nome, chave, url, bytes} — task 07
 imagens_pai: [url × até 5]
 textos: {titulo, descricao_html, seo_tag_title, seo_tag_description}   # tipo mínimo até as tasks 11/13
 tentativas: [{agente, tentativa, modelo, usage, veredito_regra, veredito_qa, request_id, em}]   # idem
@@ -412,28 +429,29 @@ src/loja_integrada_cadastro/
     ✅ layout_planilha_entrada.py    as 14 colunas da planilha de entrada, na ordem sugerida (task 04)
     ✅ problema_linha_planilha.py    ProblemaLinhaPlanilha (linha, coluna, motivo) (task 04)
     ✅ resultado_validacao.py        ProblemaValidacao, ResultadoValidacao {problemas, avisos, aprovado} (task 05)
-    🔲 foto_produto.py               FotoProduto (cor, ordem, nome, chave, url)
+    ✅ foto_produto.py               FotoProduto (frozen: sku_pai, cor, ordem, arquivo_origem, nome, chave, url, bytes) (task 07)
     🔲 textos_produto.py             TextosProduto (4 campos)
     🔲 veredicto_qa.py               VeredictoQa + ProblemaQa
-    ✅ estado_produto.py             EstadoProduto (fábrica registrar_validacao + 8 métodos de intenção) e status_produto.py: StatusProduto (Enum) (task 06)
+    ✅ estado_produto.py             EstadoProduto (fábrica registrar_validacao + 8 métodos de intenção; `fotos: tuple[FotoProduto, ...]` desde a task 07) e status_produto.py: StatusProduto (Enum) (task 06)
     🔲 linha_planilha.py             LinhaPlanilha (dict tipado coluna→valor) 
     🔲 layout_planilha_loja_integrada.py   as 54 colunas, na ordem
     🔲 regras_texto.py               limites e validações de regra dos 4 campos (puras)
-    🔲 slug.py                       slugificação (sem acento, minúsculas, hífens)
+    ✅ slug.py                       slugificar(texto) -> str (sem acento, minúsculas, hífens) (task 07)
+    ✅ nomeador_fotos.py             NomeadorFotos.nomear(produto, cor, ordem) -> str; SeletorImagensPai.selecionar(fotos) -> list (task 07)
     exceptions/
       ✅ erro_configuracao.py        ErroConfiguracao(variavel, valor_invalido) (task 01)
       ✅ erro_recursos.py            ErroRecursos(recurso, motivo) (task 02)
       ✅ erro_planilha_entrada.py    ErroPlanilhaEntrada(caminho, problemas: tuple[ProblemaLinhaPlanilha, ...]) (task 04)
       ✅ erro_transicao_estado_invalida.py  ErroTransicaoEstadoInvalida(sku_pai, status_atual, metodo) (task 06)
       ✅ erro_estado_lote.py         ErroEstadoLote(caminho, motivo) (task 06)
-      🔲                             ErroValidacaoEntrada, ErroProcessamentoImagem, ErroPublicacaoImagem,
-                                  ErroGeracaoTexto, ErroConsultaLoja
+      ✅ erro_processamento_imagem.py  ErroProcessamentoImagem(origem, motivo) (task 07)
+      🔲                             ErroValidacaoEntrada, ErroPublicacaoImagem, ErroGeracaoTexto, ErroConsultaLoja
   🔲 services/
     🔲 ports/
       ✅ leitor_planilha_entrada.py  LeitorPlanilhaEntrada.ler(caminho) -> list[ProdutoEntrada] (task 04)
       ✅ catalogo_fotos.py           CatalogoFotos.listar(sku_pai) -> dict[cor, list[caminho]]; cores_disponiveis(sku_pai) (task 05)
-      🔲 processador_imagem.py       ProcessadorImagem.preparar(caminho) -> bytes (JPEG final)
-      🔲 armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, bytes) -> url; existe(url) -> bool
+      ✅ processador_imagem.py       ProcessadorImagem.preparar(origem: Path) -> bytes (JPEG final) (task 07)
+      ✅ armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, dados) -> url; existe(url) -> bool (task 07)
       🔲 cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, schema: type[T]) -> RespostaLlm[T]
       🔲 repositorio_prompts.py      RepositorioPrompts.renderizar(nome, contexto) -> PromptRenderizado
       ✅ repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar() (task 06)
@@ -441,7 +459,7 @@ src/loja_integrada_cadastro/
       🔲 consulta_loja.py            ConsultaLoja.buscar(termo) -> list[url]; pagina(url) -> PaginaProduto
     ✅ validador_entrada.py          ValidadorEntrada(dados_mestre, catalogo_fotos, marcas_com_perfil) (task 05)
     ✅ politica_reexecucao.py        PoliticaReexecucao.decidir(...) -> ResultadoPoliticaReexecucao (task 06)
-    🔲 pipeline_fotos.py             PipelineFotos(catalogo, processador, armazenamento)
+    ✅ pipeline_fotos.py             PipelineFotos(catalogo, processador, armazenamento).processar(produto, estado) -> list[FotoProduto] (task 07)
     🔲 agente_copywriter.py          AgenteCopywriter(llm, prompts, recursos)
     🔲 agente_seo.py                 AgenteSeo(llm, prompts, recursos)
     🔲 agente_qa.py                  AgenteQa(llm, prompts, recursos)
@@ -454,8 +472,9 @@ src/loja_integrada_cadastro/
     ✅ leitor_planilha_entrada_openpyxl.py    LeitorPlanilhaEntradaOpenpyxl (task 04)
     ✅ gerador_modelo_entrada_openpyxl.py     GeradorModeloEntrada(dados_mestre).gerar(destino) (task 04)
     ✅ catalogo_fotos_diretorio.py             CatalogoFotosDiretorio (task 05)
-    🔲 processador_imagem_pillow.py
-    🔲 armazenamento_imagens_r2.py            boto3 (S3-compatible)
+    ✅ processador_imagem_pillow.py            ProcessadorImagemPillow(lado_max_px, tamanho_max_kb): Pillow + pillow-heif (task 07)
+    ✅ armazenamento_imagens_diretorio.py       ArmazenamentoImagensDiretorio(raiz): grava em fotos-processadas/, devolve URL file:// (task 07)
+    🔲 armazenamento_imagens_r2.py            boto3 (S3-compatible) (task 08)
     🔲 cliente_llm_anthropic.py               SDK anthropic: parse(), caching, usage, erros → domínio
     🔲 esquemas_llm.py                        modelos pydantic de saída estruturada (por agente)
     🔲 repositorio_prompts_jinja.py           Jinja2 + recursos do pacote
@@ -485,9 +504,10 @@ Regras que as tasks devem respeitar:
   (`registrar_fotos`, `registrar_textos`, `reprovar`…).
 
 Dependências instaladas: `openpyxl`, `python-dotenv` (task 01); `pyyaml` (task 02, com stub
-`types-PyYAML`). A adicionar quando a task correspondente chegar: `anthropic`, `pydantic`,
-`jinja2`, `pillow`, `pillow-heif`, `boto3`, `httpx`, `selectolax` (+ stub para mypy:
-`boto3-stubs[s3]`).
+`types-PyYAML`); `pillow`, `pillow-heif` (task 07 — wheels pré-compiladas confirmadas para
+`cp314-win_amd64`, sem toolchain de compilação necessária no Windows). A adicionar quando a
+task correspondente chegar: `anthropic`, `pydantic`, `jinja2`, `boto3`, `httpx`, `selectolax`
+(+ stub para mypy: `boto3-stubs[s3]`).
 
 Convenção de lint: exceções de domínio chamam-se `Erro<Nome>`; a regra ruff `N818` (sufixo
 `Error`) está desligada no `pyproject.toml` por isso.
@@ -582,7 +602,7 @@ própria loja rejeita cor fora da lista, inclusive com caixa diferente.
 | 3 | Busca pública por título pode não localizar a página (slug divergente). | `verificar` tenta slug previsto do título e busca; registra `nao-localizado` sem falhar o lote. |
 | 4 | Falha silenciosa de imagem na importação (POC rodada 1). | Compressão < 500 KB + `HEAD` na URL antes da planilha + `verificar` acusa produto sem imagem. |
 | 5 | Custo de LLM em lotes grandes. | Cache por marca, ordenação por marca, effort por agente, relatório com custo real; Batches como evolução. |
-| 6 | HEIC no Windows depende de `pillow-heif` (roda binário). | Task 05 só confere extensão/existência do arquivo (sem decodificar); teste real com `pillow-heif` fica para a task 07, que abre e processa a imagem. Fallback: exigir JPG/PNG. |
+| 6 | ~~HEIC no Windows depende de `pillow-heif` (roda binário).~~ **Resolvido (task 07):** wheel pré-compilada `pillow_heif-1.7.0-cp314-cp314-win_amd64` existe e foi testada (`pip install --dry-run` + roundtrip real de encode/decode HEIC no `.venv` do projeto, Python 3.14.6) — nenhum toolchain de compilação necessário. | `ProcessadorImagemPillow` registra `pillow_heif.register_heif_opener()` com `try/except ImportError`: se a lib faltar em outro ambiente, `.heic` falha com `ErroProcessamentoImagem` pedindo JPG/PNG/WEBP (fallback ainda ativo, só não foi necessário aqui). |
 | 7 | Mudança de layout da exportação da loja (nova grade). | Constante versionada + teste opcional contra exportação nova; task de atualização documentada. |
 | 8 | Produto reprovado pelo QA fica fora da planilha (decisão confirmada, §6.2). | Relatório destaca reprovados no topo; CLI encerra com código ≠ 0; `--refazer-textos`/`--incluir-reprovados` para resolver. |
 | 9 | Lote grande demora (execução sequencial, ~40 s/produto). | Estado permite interromper e retomar; evolução documentada em §13 (paralelismo por etapa, Batches) quando lotes passarem de centenas. |

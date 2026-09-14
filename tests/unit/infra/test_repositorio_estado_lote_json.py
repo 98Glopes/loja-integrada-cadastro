@@ -6,6 +6,7 @@ import pytest
 from loja_integrada_cadastro.infra.repositorio_estado_lote_json import RepositorioEstadoLoteJson
 from loja_integrada_cadastro.models.estado_produto import EstadoProduto
 from loja_integrada_cadastro.models.exceptions.erro_estado_lote import ErroEstadoLote
+from loja_integrada_cadastro.models.foto_produto import FotoProduto
 from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
 from loja_integrada_cadastro.models.resultado_validacao import (
     ProblemaValidacao,
@@ -40,7 +41,18 @@ def _estado_completo() -> EstadoProduto:
     )
     estado = EstadoProduto.registrar_validacao("3254002", _entrada(), "hash-abc", resultado)
     estado.registrar_fotos(
-        fotos=({"cor": "Beige", "ordem": 1, "nome": "foto-1.jpg", "bytes": 123456},),
+        fotos=(
+            FotoProduto(
+                sku_pai="3254002",
+                cor="Beige",
+                ordem=1,
+                arquivo_origem=Path("fotos/3254002/Beige/20250920_113424.jpg"),
+                nome="foto-1.jpg",
+                chave="produtos/3254002/foto-1.jpg",
+                url="https://cdn.example.com/foto-1.jpg",
+                bytes=123456,
+            ),
+        ),
         imagens_pai=("https://cdn.example.com/foto-1.jpg",),
     )
     estado.registrar_tentativa(

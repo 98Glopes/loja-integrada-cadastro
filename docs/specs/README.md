@@ -21,8 +21,8 @@ branco.
 | `planilha-entrada` | `models/produto_entrada.py`, `variacao_entrada.py`, port `LeitorPlanilhaEntrada`, leitor e gerador de modelo openpyxl | 04 | [spec](planilha-entrada.md) |
 | `validacao` | `services/validador_entrada.py`, `models/resultado_validacao.py`, port `CatalogoFotos` e implementação em diretório | 05 | [spec](validacao.md) |
 | `estado-lote` | `models/estado_produto.py`, `status_produto.py`, port `RepositorioEstadoLote`, implementação JSON, política de reexecução | 06 | [spec](estado-lote.md) |
-| `fotos` | `models/slug.py`, `foto_produto.py`, `nomeador_fotos.py`, port `ProcessadorImagem` (Pillow), `services/pipeline_fotos.py` | 07 | — |
-| `armazenamento-r2` | port `ArmazenamentoImagens`, `infra/armazenamento_imagens_r2.py` (+ diretório) | 07, 08 | — |
+| `fotos` | `models/slug.py`, `foto_produto.py`, `nomeador_fotos.py`, port `ProcessadorImagem` (Pillow), `services/pipeline_fotos.py` | 07 | [spec](fotos.md) |
+| `armazenamento-r2` | port `ArmazenamentoImagens`, `infra/armazenamento_imagens_r2.py` (+ diretório) | 07, 08 | [spec](armazenamento-r2.md) |
 | `llm-cliente-prompts` | ports `ClienteLlm` e `RepositorioPrompts`, `infra/cliente_llm_anthropic.py`, `esquemas_llm.py`, `repositorio_prompts_jinja.py`, `recursos/precos_llm.yaml` | 09 | — |
 | `agentes-textos` | `recursos/{loja,copy,seo,qa}.md`, `recursos/marcas/`, `recursos/prompts/*.j2`, `models/regras_texto.py`, agentes Copywriter/SEO/QA, `services/gerador_textos.py` | 10, 11, 12, 13 | — |
 | `planilha-saida` | `models/layout_planilha_loja_integrada.py`, `linha_planilha.py`, `services/montador_planilha.py`, port `EscritorPlanilhaSaida` | 14 | — |

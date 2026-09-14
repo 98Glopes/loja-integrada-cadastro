@@ -10,6 +10,7 @@ from typing import Any
 
 from loja_integrada_cadastro.models.estado_produto import EstadoProduto
 from loja_integrada_cadastro.models.exceptions.erro_estado_lote import ErroEstadoLote
+from loja_integrada_cadastro.models.foto_produto import FotoProduto
 from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
 from loja_integrada_cadastro.models.resultado_validacao import (
     ProblemaValidacao,
@@ -79,7 +80,7 @@ def _para_dict(estado: EstadoProduto) -> dict[str, Any]:
         "entrada": _produto_entrada_para_dict(estado.entrada),
         "hash_entrada": estado.hash_entrada,
         "validacao": _resultado_validacao_para_dict(estado.validacao),
-        "fotos": [dict(foto) for foto in estado.fotos],
+        "fotos": [_foto_para_dict(foto) for foto in estado.fotos],
         "imagens_pai": list(estado.imagens_pai),
         "textos": dict(estado.textos) if estado.textos is not None else None,
         "tentativas": [dict(tentativa) for tentativa in estado.tentativas],
@@ -96,7 +97,7 @@ def _de_dict(dados: dict[str, Any]) -> EstadoProduto:
         entrada=_produto_entrada_de_dict(dados["entrada"]),
         hash_entrada=dados["hash_entrada"],
         validacao=_resultado_validacao_de_dict(dados["validacao"]),
-        fotos=tuple(dados["fotos"]),
+        fotos=tuple(_foto_de_dict(foto) for foto in dados["fotos"]),
         imagens_pai=tuple(dados["imagens_pai"]),
         textos=dados["textos"],
         tentativas=tuple(dados["tentativas"]),
@@ -151,6 +152,32 @@ def _produto_entrada_de_dict(dados: dict[str, Any]) -> ProdutoEntrada:
             )
             for variacao in dados["variacoes"]
         ),
+    )
+
+
+def _foto_para_dict(foto: FotoProduto) -> dict[str, Any]:
+    return {
+        "sku_pai": foto.sku_pai,
+        "cor": foto.cor,
+        "ordem": foto.ordem,
+        "arquivo_origem": str(foto.arquivo_origem),
+        "nome": foto.nome,
+        "chave": foto.chave,
+        "url": foto.url,
+        "bytes": foto.bytes,
+    }
+
+
+def _foto_de_dict(dados: dict[str, Any]) -> FotoProduto:
+    return FotoProduto(
+        sku_pai=dados["sku_pai"],
+        cor=dados["cor"],
+        ordem=dados["ordem"],
+        arquivo_origem=Path(dados["arquivo_origem"]),
+        nome=dados["nome"],
+        chave=dados["chave"],
+        url=dados["url"],
+        bytes=dados["bytes"],
     )
 
 
