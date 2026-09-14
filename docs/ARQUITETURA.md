@@ -399,7 +399,7 @@ src/loja_integrada_cadastro/
     ✅ dados_mestre.py               DadosMestre: marcas (canônica+aliases), cores, tamanhos, categorias de referência (task 02)
     ✅ layout_planilha_entrada.py    as 14 colunas da planilha de entrada, na ordem sugerida (task 04)
     ✅ problema_linha_planilha.py    ProblemaLinhaPlanilha (linha, coluna, motivo) (task 04)
-    🔲 resultado_validacao.py        ResultadoValidacao {problemas, avisos}
+    ✅ resultado_validacao.py        ProblemaValidacao, ResultadoValidacao {problemas, avisos, aprovado} (task 05)
     🔲 foto_produto.py               FotoProduto (cor, ordem, nome, chave, url)
     🔲 textos_produto.py             TextosProduto (4 campos)
     🔲 veredicto_qa.py               VeredictoQa + ProblemaQa
@@ -417,7 +417,7 @@ src/loja_integrada_cadastro/
   🔲 services/
     🔲 ports/
       ✅ leitor_planilha_entrada.py  LeitorPlanilhaEntrada.ler(caminho) -> list[ProdutoEntrada] (task 04)
-      🔲 catalogo_fotos.py           CatalogoFotos.listar(sku_pai) -> dict[cor, list[caminho]]
+      ✅ catalogo_fotos.py           CatalogoFotos.listar(sku_pai) -> dict[cor, list[caminho]]; cores_disponiveis(sku_pai) (task 05)
       🔲 processador_imagem.py       ProcessadorImagem.preparar(caminho) -> bytes (JPEG final)
       🔲 armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, bytes) -> url; existe(url) -> bool
       🔲 cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, schema: type[T]) -> RespostaLlm[T]
@@ -425,7 +425,7 @@ src/loja_integrada_cadastro/
       🔲 repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar()
       🔲 escritor_planilha_saida.py  EscritorPlanilhaSaida.escrever(linhas, destino)
       🔲 consulta_loja.py            ConsultaLoja.buscar(termo) -> list[url]; pagina(url) -> PaginaProduto
-    🔲 validador_entrada.py          ValidadorEntrada(dados_mestre, catalogo_fotos)
+    ✅ validador_entrada.py          ValidadorEntrada(dados_mestre, catalogo_fotos, marcas_com_perfil) (task 05)
     🔲 pipeline_fotos.py             PipelineFotos(catalogo, processador, armazenamento)
     🔲 agente_copywriter.py          AgenteCopywriter(llm, prompts, recursos)
     🔲 agente_seo.py                 AgenteSeo(llm, prompts, recursos)
@@ -438,7 +438,7 @@ src/loja_integrada_cadastro/
   🔲 infra/
     ✅ leitor_planilha_entrada_openpyxl.py    LeitorPlanilhaEntradaOpenpyxl (task 04)
     ✅ gerador_modelo_entrada_openpyxl.py     GeradorModeloEntrada(dados_mestre).gerar(destino) (task 04)
-    🔲 catalogo_fotos_diretorio.py
+    ✅ catalogo_fotos_diretorio.py             CatalogoFotosDiretorio (task 05)
     🔲 processador_imagem_pillow.py
     🔲 armazenamento_imagens_r2.py            boto3 (S3-compatible)
     🔲 cliente_llm_anthropic.py               SDK anthropic: parse(), caching, usage, erros → domínio
@@ -451,9 +451,9 @@ src/loja_integrada_cadastro/
   config/
     ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
     ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
-    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); 🔲 montar_processador_lote(), montar_verificador()
+    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); 🔲 montar_processador_lote(), montar_verificador()
   🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; demais arquivos pendentes)
-  ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar | processar | verificar (task 01; os 3 últimos "não implementado", código 2)
+  ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar (task 05) | processar | verificar (task 01; os 2 últimos "não implementado", código 2)
 ```
 
 Cada task troca para ✅ o que entregou e ajusta nomes/arquivos para os reais. Detalhe do que
@@ -567,7 +567,7 @@ própria loja rejeita cor fora da lista, inclusive com caixa diferente.
 | 3 | Busca pública por título pode não localizar a página (slug divergente). | `verificar` tenta slug previsto do título e busca; registra `nao-localizado` sem falhar o lote. |
 | 4 | Falha silenciosa de imagem na importação (POC rodada 1). | Compressão < 500 KB + `HEAD` na URL antes da planilha + `verificar` acusa produto sem imagem. |
 | 5 | Custo de LLM em lotes grandes. | Cache por marca, ordenação por marca, effort por agente, relatório com custo real; Batches como evolução. |
-| 6 | HEIC no Windows depende de `pillow-heif` (roda binário). | Testar na task 05; fallback: exigir JPG/PNG. |
+| 6 | HEIC no Windows depende de `pillow-heif` (roda binário). | Task 05 só confere extensão/existência do arquivo (sem decodificar); teste real com `pillow-heif` fica para a task 07, que abre e processa a imagem. Fallback: exigir JPG/PNG. |
 | 7 | Mudança de layout da exportação da loja (nova grade). | Constante versionada + teste opcional contra exportação nova; task de atualização documentada. |
 | 8 | Produto reprovado pelo QA fica fora da planilha (decisão confirmada, §6.2). | Relatório destaca reprovados no topo; CLI encerra com código ≠ 0; `--refazer-textos`/`--incluir-reprovados` para resolver. |
 | 9 | Lote grande demora (execução sequencial, ~40 s/produto). | Estado permite interromper e retomar; evolução documentada em §13 (paralelismo por etapa, Batches) quando lotes passarem de centenas. |

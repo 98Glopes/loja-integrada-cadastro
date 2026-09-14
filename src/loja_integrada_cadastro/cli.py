@@ -6,8 +6,14 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from loja_integrada_cadastro.config.composicao import montar_gerador_modelo_entrada
+from loja_integrada_cadastro.config.composicao import (
+    montar_gerador_modelo_entrada,
+    montar_leitor_planilha_entrada,
+    montar_validador_entrada,
+)
+from loja_integrada_cadastro.models.exceptions.erro_planilha_entrada import ErroPlanilhaEntrada
 from loja_integrada_cadastro.models.exceptions.erro_recursos import ErroRecursos
+from loja_integrada_cadastro.models.resultado_validacao import ResultadoValidacao
 
 if TYPE_CHECKING:
     from argparse import _SubParsersAction
@@ -104,7 +110,40 @@ class AplicacaoCli:
         return 0
 
     def _validar(self, opcoes: Namespace) -> int:
-        return self._nao_implementado("validar")
+        try:
+            produtos = montar_leitor_planilha_entrada().ler(opcoes.planilha)
+        except ErroPlanilhaEntrada as erro:
+            print(f"validar: {erro}", file=sys.stderr)
+            return CODIGO_ERRO_NEGOCIO
+
+        try:
+            _, resultado = montar_validador_entrada(opcoes.fotos).validar(produtos)
+        except ErroRecursos as erro:
+            print(f"validar: {erro}", file=sys.stderr)
+            return CODIGO_ERRO_NEGOCIO
+
+        self._imprimir_resultado_validacao(resultado)
+        return 0 if resultado.aprovado else CODIGO_ERRO_NEGOCIO
+
+    @staticmethod
+    def _imprimir_resultado_validacao(resultado: ResultadoValidacao) -> None:
+        skus = dict.fromkeys(item.sku_pai for item in (*resultado.problemas, *resultado.avisos))
+        for sku_pai in skus:
+            print(f"SKU {sku_pai}:")
+            for problema in resultado.problemas:
+                if problema.sku_pai == sku_pai:
+                    print(f"  [problema] {problema.campo}: {problema.mensagem}")
+            for aviso in resultado.avisos:
+                if aviso.sku_pai == sku_pai:
+                    print(f"  [aviso] {aviso.campo}: {aviso.mensagem}")
+
+        if resultado.aprovado:
+            print(f"validar: aprovado ({len(resultado.avisos)} aviso(s))")
+        else:
+            print(
+                f"validar: reprovado ({len(resultado.problemas)} problema(s), "
+                f"{len(resultado.avisos)} aviso(s))"
+            )
 
     def _processar(self, opcoes: Namespace) -> int:
         return self._nao_implementado("processar")

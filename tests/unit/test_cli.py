@@ -1,10 +1,54 @@
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import pytest
+from openpyxl import Workbook
 
 from loja_integrada_cadastro.cli import AplicacaoCli
+from loja_integrada_cadastro.models.layout_planilha_entrada import COLUNAS_PLANILHA_ENTRADA
 
 SUBCOMANDOS = ("modelo-entrada", "validar", "processar", "verificar")
+
+
+def _planilha(tmp_path: Path, linhas: Sequence[Mapping[str, object]]) -> Path:
+    workbook = Workbook()
+    aba = workbook.active
+    assert aba is not None
+    aba.append(list(COLUNAS_PLANILHA_ENTRADA))
+    for linha in linhas:
+        aba.append([linha.get(coluna, "") for coluna in COLUNAS_PLANILHA_ENTRADA])
+    caminho = tmp_path / "planilha.xlsx"
+    workbook.save(caminho)
+    return caminho
+
+
+def _linha_produto(**sobrescritas: object) -> dict[str, object]:
+    base: dict[str, object] = {
+        "sku-pai": "3254002",
+        "marca": "kiki",
+        "nome-fornecedor": "Conjunto Baby Malha e Moletom",
+        "tipo-peca": "Conjunto",
+        "categoria": "Linha Baby (P ao XG) > Menino > Conjunto",
+        "composicao": "100% algodão",
+        "detalhes": "Botões na gola",
+        "colecao": "",
+        "faixa-tamanho": "P ao G",
+        "cor": "Beige",
+        "tamanho": "P",
+        "gtin": "7891234567895",
+        "preco": "119,90",
+        "estoque": 10,
+    }
+    base.update(sobrescritas)
+    return base
+
+
+def _pasta_de_fotos(tmp_path: Path, sku_pai: str = "3254002", cor: str = "Beige") -> Path:
+    raiz = tmp_path / "fotos"
+    pasta = raiz / sku_pai / cor
+    pasta.mkdir(parents=True)
+    (pasta / "foto-1.jpg").write_bytes(b"fake")
+    return raiz
 
 
 def test_help_lista_os_quatro_subcomandos(capsys: pytest.CaptureFixture[str]) -> None:
@@ -20,11 +64,10 @@ def test_help_lista_os_quatro_subcomandos(capsys: pytest.CaptureFixture[str]) ->
 @pytest.mark.parametrize(
     "argumentos",
     [
-        ["validar", "--planilha", "p.xlsx", "--fotos", "fotos"],
         ["processar", "--planilha", "p.xlsx", "--fotos", "fotos", "--lote", "lote-1"],
         ["verificar", "--lote", "lote-1"],
     ],
-    ids=SUBCOMANDOS[1:],
+    ids=SUBCOMANDOS[2:],
 )
 def test_subcomando_retorna_2_e_avisa_nao_implementado(
     argumentos: list[str], capsys: pytest.CaptureFixture[str]
@@ -33,6 +76,51 @@ def test_subcomando_retorna_2_e_avisa_nao_implementado(
 
     assert codigo == 2
     assert f"{argumentos[0]}: não implementado" in capsys.readouterr().err
+
+
+def test_validar_aprova_planilha_e_fotos_validas(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    planilha = _planilha(tmp_path, [_linha_produto()])
+    fotos = _pasta_de_fotos(tmp_path)
+
+    codigo = AplicacaoCli().executar(
+        ["validar", "--planilha", str(planilha), "--fotos", str(fotos)]
+    )
+
+    assert codigo == 0
+    assert "validar: aprovado" in capsys.readouterr().out
+
+
+def test_validar_retorna_1_e_lista_problema_de_cor_invalida(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    planilha = _planilha(tmp_path, [_linha_produto(cor="Amarelo Fluorescente")])
+    fotos = _pasta_de_fotos(tmp_path, cor="Amarelo Fluorescente")
+
+    codigo = AplicacaoCli().executar(
+        ["validar", "--planilha", str(planilha), "--fotos", str(fotos)]
+    )
+
+    saida = capsys.readouterr().out
+    assert codigo == 1
+    assert "SKU 3254002" in saida
+    assert "cor" in saida
+    assert "validar: reprovado" in saida
+
+
+def test_validar_planilha_invalida_retorna_codigo_erro_negocio(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    planilha = _planilha(tmp_path, [_linha_produto(marca="")])
+    fotos = _pasta_de_fotos(tmp_path)
+
+    codigo = AplicacaoCli().executar(
+        ["validar", "--planilha", str(planilha), "--fotos", str(fotos)]
+    )
+
+    assert codigo == 1
+    assert "validar:" in capsys.readouterr().err
 
 
 def test_modelo_entrada_gera_arquivo_no_destino(
