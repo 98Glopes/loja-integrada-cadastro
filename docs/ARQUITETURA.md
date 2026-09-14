@@ -136,6 +136,7 @@ cabeçalhos.
 | `composicao` | produto | sim | Ex.: `100% algodão`; `malha + moletom`. |
 | `detalhes` | produto | sim | Diferenciais: botões na gola, bordado, babado, laço, estampa… |
 | `colecao` | produto | não | Ex.: `Outono/Inverno 2026`. |
+| `faixa-tamanho` | produto | sim | Texto livre com a faixa de tamanhos da família (ex.: `P ao G`, `1 ao 4`, `P ao 3`), escrita pela dona da loja — **não** é calculada a partir dos tamanhos das variações (ver ADR-005). Vai para título/descrição (§6). |
 | `cor` | variação | sim | Grafia **exata** da grade da loja (`Beige`, `Rosa`, `Cinza Claro`…). Validador reprova cor fora da lista mestre. Precisa ter subpasta correspondente em `fotos/<sku-pai>/`. |
 | `tamanho` | variação | sim | `P M G GG XG` ou `1 2 3 4 6 8 10 12 14 16 18 20` (lista mestre). |
 | `gtin` | variação | sim | Código de barras da variação (8/12/13/14 dígitos, dígito verificador conferido). Único no lote. |
@@ -150,9 +151,9 @@ Regras de agrupamento:
 - A ordem das cores na planilha define a ordem das fotos no pai (§5.3).
 - Combinação cor × tamanho duplicada no mesmo SKU reprova.
 
-O que **não** está na entrada porque é derivado ou configurado: faixa de tamanho (derivada dos
-tamanhos), peso/dimensões (config), `ativo` (config), textos (IA), URLs de imagem (R2),
-SKU das filhas (`<sku-pai>-<cor-slug>-<tamanho-slug>`), URL da página (a loja deriva do título).
+O que **não** está na entrada porque é derivado ou configurado: peso/dimensões (config),
+`ativo` (config), textos (IA), URLs de imagem (R2), SKU das filhas
+(`<sku-pai>-<cor-slug>-<tamanho-slug>`), URL da página (a loja deriva do título).
 
 ## 5. Fotos
 
@@ -394,8 +395,10 @@ abaixo é a **direção**; cada task cria só o que a funcionalidade dela exige.
 ```
 src/loja_integrada_cadastro/
   🔲 models/
-    🔲 produto_entrada.py            ProdutoEntrada (frozen) + VariacaoEntrada
+    ✅ produto_entrada.py            ProdutoEntrada (frozen) + variacao_entrada.py: VariacaoEntrada (task 04)
     ✅ dados_mestre.py               DadosMestre: marcas (canônica+aliases), cores, tamanhos, categorias de referência (task 02)
+    ✅ layout_planilha_entrada.py    as 14 colunas da planilha de entrada, na ordem sugerida (task 04)
+    ✅ problema_linha_planilha.py    ProblemaLinhaPlanilha (linha, coluna, motivo) (task 04)
     🔲 resultado_validacao.py        ResultadoValidacao {problemas, avisos}
     🔲 foto_produto.py               FotoProduto (cor, ordem, nome, chave, url)
     🔲 textos_produto.py             TextosProduto (4 campos)
@@ -408,11 +411,12 @@ src/loja_integrada_cadastro/
     exceptions/
       ✅ erro_configuracao.py        ErroConfiguracao(variavel, valor_invalido) (task 01)
       ✅ erro_recursos.py            ErroRecursos(recurso, motivo) (task 02)
+      ✅ erro_planilha_entrada.py    ErroPlanilhaEntrada(caminho, problemas: tuple[ProblemaLinhaPlanilha, ...]) (task 04)
       🔲                             ErroValidacaoEntrada, ErroProcessamentoImagem, ErroPublicacaoImagem,
                                   ErroGeracaoTexto, ErroConsultaLoja, ErroEstadoLote
   🔲 services/
     🔲 ports/
-      🔲 leitor_planilha_entrada.py  LeitorPlanilhaEntrada.ler(caminho) -> list[ProdutoEntrada]
+      ✅ leitor_planilha_entrada.py  LeitorPlanilhaEntrada.ler(caminho) -> list[ProdutoEntrada] (task 04)
       🔲 catalogo_fotos.py           CatalogoFotos.listar(sku_pai) -> dict[cor, list[caminho]]
       🔲 processador_imagem.py       ProcessadorImagem.preparar(caminho) -> bytes (JPEG final)
       🔲 armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, bytes) -> url; existe(url) -> bool
@@ -432,7 +436,8 @@ src/loja_integrada_cadastro/
     🔲 gerador_relatorio.py          GeradorRelatorio(estados) -> markdown + dict
     🔲 verificador_importacao.py     VerificarImportacao(consulta_loja, estado)
   🔲 infra/
-    🔲 leitor_planilha_entrada_openpyxl.py
+    ✅ leitor_planilha_entrada_openpyxl.py    LeitorPlanilhaEntradaOpenpyxl (task 04)
+    ✅ gerador_modelo_entrada_openpyxl.py     GeradorModeloEntrada(dados_mestre).gerar(destino) (task 04)
     🔲 catalogo_fotos_diretorio.py
     🔲 processador_imagem_pillow.py
     🔲 armazenamento_imagens_r2.py            boto3 (S3-compatible)
@@ -446,9 +451,9 @@ src/loja_integrada_cadastro/
   config/
     ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
     ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
-    🔲 composicao.py                          montar_processador_lote(), montar_verificador() (composition root)
+    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); 🔲 montar_processador_lote(), montar_verificador()
   🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; demais arquivos pendentes)
-  ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada | validar | processar | verificar (task 01; todos "não implementado", código 2)
+  ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar | processar | verificar (task 01; os 3 últimos "não implementado", código 2)
 ```
 
 Cada task troca para ✅ o que entregou e ajusta nomes/arquivos para os reais. Detalhe do que
@@ -618,3 +623,21 @@ desvio altera uma decisão de arquitetura (não para desvios locais — esses fi
   com o YAML de dados de domínio; `DadosMestre` fica focado em marcas, cores, tamanhos e
   categorias de referência.
 - **Task:** 02.
+
+### ADR-005 — `faixa_tamanho` é coluna de entrada, não propriedade derivada (13/09/2026)
+- **Contexto:** o desenho inicial (§4) descrevia a faixa de tamanho da família como calculada a
+  partir dos tamanhos das variações ("P ao 3", "1 ao 4"), e listava como algo que "não está na
+  entrada". Na prática, uma família (`sku-pai`) pode ter variações com tamanhos de **escalas
+  diferentes** misturadas (letra P/M/G/GG/XG e número 1/2/3/4/6/8/...), o que inviabiliza
+  calcular uma faixa única e correta automaticamente sem uma ordem canônica cruzando as duas
+  escalas — informação que a dona da loja já tem e o sistema não.
+- **Decisão:** `faixa-tamanho` vira a 14ª coluna da planilha de entrada (nível produto,
+  obrigatória, texto livre, ex.: `"P ao G"`), preenchida pela dona da loja. `ProdutoEntrada` não
+  tem mais uma property `faixa_tamanho` calculada — é um campo simples, como `marca` ou
+  `tipo_peca`. Usada depois na geração de título/descrição (§6). `DadosMestre.tamanhos`
+  continua sem ordem (`frozenset[str]`) — não há mais necessidade de ordem canônica cruzando
+  escalas.
+- **Consequência:** o layout da planilha de entrada passa de 13 para 14 colunas; o gerador do
+  modelo (`modelo-entrada`) e o leitor precisam da coluna nova; nenhuma lógica de cálculo de
+  faixa é necessária, evitando o caso mal definido de família com escalas misturadas.
+- **Task:** 04.
