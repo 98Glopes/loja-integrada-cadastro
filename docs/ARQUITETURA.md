@@ -345,24 +345,36 @@ lotes/<nome-do-lote>/
   relatorio.json                  mesmo conteúdo, estruturado (base do `verificar` e de evals)
 ```
 
-Estado por produto (`EstadoProduto`, serializado em JSON):
+Estado por produto (`EstadoProduto`, serializado em JSON) ✅ implementado (task 06):
 
 ```
-sku_pai, status: validado | erro-fotos | textos-gerados | reprovado-qa | erro-llm | pronto
+sku_pai, status: validado | reprovado-validacao | erro-fotos | fotos-publicadas |
+                 textos-gerados | reprovado-qa | erro-llm | pronto
 entrada: ProdutoEntrada (normalizado)
+hash_entrada
 validacao: {problemas: [...], avisos: [...]}
-fotos: [{cor, ordem, arquivo_origem, nome, chave_r2, url, bytes, publicada_em}]
+fotos: [{cor, ordem, arquivo_origem, nome, chave_r2, url, bytes, publicada_em}]   # tipo mínimo até a task 07
 imagens_pai: [url × até 5]
-textos: {titulo, descricao_html, seo_tag_title, seo_tag_description}
-tentativas: [{agente, tentativa, modelo, usage, veredito_regra, veredito_qa, request_id, em}]
+textos: {titulo, descricao_html, seo_tag_title, seo_tag_description}   # tipo mínimo até as tasks 11/13
+tentativas: [{agente, tentativa, modelo, usage, veredito_regra, veredito_qa, request_id, em}]   # idem
 custo_usd_estimado
-verificacao: {em, url_pagina, title_ok, meta_ok, imagens_encontradas, grades_ok, problemas}
+verificacao: {em, url_pagina, title_ok, meta_ok, imagens_encontradas, grades_ok, problemas}   # tipo mínimo até a task 17
+atualizado_em
 ```
 
-Reexecução (`processar` com o mesmo `--lote`): produtos `pronto` são pulados; `erro-*` e
-`reprovado-*` são reprocessados a partir da etapa que falhou; `--refazer-textos <sku>` e
-`--refazer-fotos <sku>` forçam regeneração pontual. Planilha de entrada alterada → produtos
-cujo conteúdo mudou (hash da entrada normalizada) voltam ao início.
+`EstadoProduto` não tem construtor vazio: nasce pela fábrica `registrar_validacao`, já
+`validado` ou `reprovado-validacao`, e evolui por métodos de intenção que validam a transição
+(grafo completo em `docs/specs/estado-lote.md`). Persistência por
+`RepositorioEstadoLoteJson` (`services/ports/repositorio_estado_lote.py` +
+`infra/repositorio_estado_lote_json.py`): um JSON por SKU em `lotes/<lote>/estado/`, escrita
+atômica, workspace (`entrada/`, `estado/`, `fotos-processadas/`, `saida/`) criado no construtor.
+
+Reexecução (`PoliticaReexecucao`, `services/politica_reexecucao.py`, ✅ task 06 — o consumo pelo
+comando `processar` é da task 15): produtos `pronto` são pulados; `erro-*` e `reprovado-*` são
+reprocessados a partir da etapa que falhou; `--refazer-textos <sku>` e `--refazer-fotos <sku>`
+forçam regeneração pontual (`--refazer-fotos` tem prioridade quando os dois aparecem juntos, já
+que retomar de fotos cobre a etapa de textos na sequência). Planilha de entrada alterada →
+produtos cujo conteúdo mudou (hash da entrada normalizada) voltam ao início (`recomeçar`).
 
 Relatório (`relatorio.md`): resumo (produtos por status, linhas geradas, custo, tempo), tabela
 por produto (SKU, marca, status, título, nº fotos, tentativas, custo), seção de reprovados com
@@ -403,7 +415,7 @@ src/loja_integrada_cadastro/
     🔲 foto_produto.py               FotoProduto (cor, ordem, nome, chave, url)
     🔲 textos_produto.py             TextosProduto (4 campos)
     🔲 veredicto_qa.py               VeredictoQa + ProblemaQa
-    🔲 estado_produto.py             EstadoProduto (status + artefatos de cada etapa) e StatusProduto (Enum)
+    ✅ estado_produto.py             EstadoProduto (fábrica registrar_validacao + 8 métodos de intenção) e status_produto.py: StatusProduto (Enum) (task 06)
     🔲 linha_planilha.py             LinhaPlanilha (dict tipado coluna→valor) 
     🔲 layout_planilha_loja_integrada.py   as 54 colunas, na ordem
     🔲 regras_texto.py               limites e validações de regra dos 4 campos (puras)
@@ -412,8 +424,10 @@ src/loja_integrada_cadastro/
       ✅ erro_configuracao.py        ErroConfiguracao(variavel, valor_invalido) (task 01)
       ✅ erro_recursos.py            ErroRecursos(recurso, motivo) (task 02)
       ✅ erro_planilha_entrada.py    ErroPlanilhaEntrada(caminho, problemas: tuple[ProblemaLinhaPlanilha, ...]) (task 04)
+      ✅ erro_transicao_estado_invalida.py  ErroTransicaoEstadoInvalida(sku_pai, status_atual, metodo) (task 06)
+      ✅ erro_estado_lote.py         ErroEstadoLote(caminho, motivo) (task 06)
       🔲                             ErroValidacaoEntrada, ErroProcessamentoImagem, ErroPublicacaoImagem,
-                                  ErroGeracaoTexto, ErroConsultaLoja, ErroEstadoLote
+                                  ErroGeracaoTexto, ErroConsultaLoja
   🔲 services/
     🔲 ports/
       ✅ leitor_planilha_entrada.py  LeitorPlanilhaEntrada.ler(caminho) -> list[ProdutoEntrada] (task 04)
@@ -422,10 +436,11 @@ src/loja_integrada_cadastro/
       🔲 armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, bytes) -> url; existe(url) -> bool
       🔲 cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, schema: type[T]) -> RespostaLlm[T]
       🔲 repositorio_prompts.py      RepositorioPrompts.renderizar(nome, contexto) -> PromptRenderizado
-      🔲 repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar()
+      ✅ repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar() (task 06)
       🔲 escritor_planilha_saida.py  EscritorPlanilhaSaida.escrever(linhas, destino)
       🔲 consulta_loja.py            ConsultaLoja.buscar(termo) -> list[url]; pagina(url) -> PaginaProduto
     ✅ validador_entrada.py          ValidadorEntrada(dados_mestre, catalogo_fotos, marcas_com_perfil) (task 05)
+    ✅ politica_reexecucao.py        PoliticaReexecucao.decidir(...) -> ResultadoPoliticaReexecucao (task 06)
     🔲 pipeline_fotos.py             PipelineFotos(catalogo, processador, armazenamento)
     🔲 agente_copywriter.py          AgenteCopywriter(llm, prompts, recursos)
     🔲 agente_seo.py                 AgenteSeo(llm, prompts, recursos)
@@ -445,7 +460,7 @@ src/loja_integrada_cadastro/
     🔲 esquemas_llm.py                        modelos pydantic de saída estruturada (por agente)
     🔲 repositorio_prompts_jinja.py           Jinja2 + recursos do pacote
     ✅ carregador_recursos.py                 lê recursos/ (md, yaml) via importlib.resources (task 02)
-    🔲 repositorio_estado_lote_json.py
+    ✅ repositorio_estado_lote_json.py         RepositorioEstadoLoteJson (task 06)
     🔲 escritor_planilha_saida_openpyxl.py
     🔲 consulta_loja_http.py                  httpx + selectolax
   config/

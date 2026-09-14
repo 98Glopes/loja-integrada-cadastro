@@ -1,0 +1,196 @@
+# Módulo: estado-lote
+
+**Responsabilidade:** persistir o progresso de cada produto do lote (`EstadoProduto`) para que
+uma reexecução pule o que está pronto e retome do ponto de falha, sem repetir etapas caras
+(LLM, upload de fotos).
+**Estado:** implementado pela task 06 · última atualização 2026-09-14 (task 06)
+
+## Arquivos
+
+- `models/status_produto.py` — `StatusProduto` (Enum)
+- `models/estado_produto.py` — `EstadoProduto`
+- `models/exceptions/erro_transicao_estado_invalida.py` — `ErroTransicaoEstadoInvalida`
+- `models/exceptions/erro_estado_lote.py` — `ErroEstadoLote`
+- `services/ports/repositorio_estado_lote.py` — `RepositorioEstadoLote` (Protocol)
+- `services/politica_reexecucao.py` — `EtapaLote`, `DecisaoReexecucao`,
+  `ResultadoPoliticaReexecucao`, `PoliticaReexecucao`
+- `infra/repositorio_estado_lote_json.py` — `RepositorioEstadoLoteJson`
+
+## Contratos
+
+```python
+# models/status_produto.py
+class StatusProduto(Enum):
+    VALIDADO = "validado"
+    REPROVADO_VALIDACAO = "reprovado-validacao"
+    ERRO_FOTOS = "erro-fotos"
+    FOTOS_PUBLICADAS = "fotos-publicadas"
+    TEXTOS_GERADOS = "textos-gerados"
+    REPROVADO_QA = "reprovado-qa"
+    ERRO_LLM = "erro-llm"
+    PRONTO = "pronto"
+
+# models/estado_produto.py — único agregado mutável do sistema
+@dataclass
+class EstadoProduto:
+    sku_pai: str
+    status: StatusProduto
+    entrada: ProdutoEntrada
+    hash_entrada: str
+    validacao: ResultadoValidacao
+    fotos: tuple[Mapping[str, object], ...] = ()
+    imagens_pai: tuple[str, ...] = ()
+    textos: Mapping[str, str] | None = None
+    tentativas: tuple[Mapping[str, object], ...] = ()
+    custo_usd_estimado: Decimal = Decimal("0")
+    verificacao: Mapping[str, object] | None = None
+    atualizado_em: datetime = <agora, UTC>
+
+    @classmethod
+    def registrar_validacao(sku_pai, entrada, hash_entrada, resultado) -> EstadoProduto: ...
+    def registrar_fotos(fotos, imagens_pai) -> None: ...
+    def registrar_erro_fotos() -> None: ...
+    def registrar_tentativa(tentativa, custo_usd=Decimal("0")) -> None: ...
+    def registrar_textos(textos) -> None: ...
+    def registrar_erro_llm() -> None: ...
+    def reprovar_qa() -> None: ...
+    def marcar_pronto() -> None: ...
+    def registrar_verificacao(verificacao) -> None: ...
+
+# models/exceptions/erro_transicao_estado_invalida.py
+class ErroTransicaoEstadoInvalida(Exception):
+    sku_pai: str
+    status_atual: StatusProduto
+    metodo: str
+
+# models/exceptions/erro_estado_lote.py
+class ErroEstadoLote(Exception):
+    caminho: Path
+    motivo: str
+
+# services/ports/repositorio_estado_lote.py
+class RepositorioEstadoLote(Protocol):
+    def carregar(self, sku_pai: str) -> EstadoProduto | None: ...
+    def salvar(self, estado: EstadoProduto) -> None: ...
+    def listar(self) -> list[EstadoProduto]: ...
+
+# services/politica_reexecucao.py
+class EtapaLote(Enum):
+    VALIDAR = "validar"; FOTOS = "fotos"; TEXTOS = "textos"; MONTAR = "montar"
+
+class DecisaoReexecucao(Enum):
+    PULAR = "pular"; RETOMAR = "retomar"; RECOMECAR = "recomecar"
+
+@dataclass(frozen=True)
+class ResultadoPoliticaReexecucao:
+    decisao: DecisaoReexecucao
+    a_partir_de: EtapaLote | None
+
+class PoliticaReexecucao:
+    def decidir(
+        self,
+        estado_anterior: EstadoProduto | None,
+        hash_entrada_atual: str,
+        *,
+        refazer_textos: bool = False,
+        refazer_fotos: bool = False,
+    ) -> ResultadoPoliticaReexecucao: ...
+
+# infra/repositorio_estado_lote_json.py
+class RepositorioEstadoLoteJson:
+    def __init__(self, lote_dir: Path) -> None: ...
+    def copiar_planilha_entrada(self, planilha: Path) -> None: ...
+    def carregar(self, sku_pai: str) -> EstadoProduto | None: ...
+    def salvar(self, estado: EstadoProduto) -> None: ...
+    def listar(self) -> list[EstadoProduto]: ...
+```
+
+## Comportamento
+
+**`EstadoProduto`** — não tem construtor "vazio"/pendente: nasce pela fábrica
+`registrar_validacao`, já como `validado` (aprovado) ou `reprovado-validacao` (reprovado). Os
+demais 8 métodos são de instância e só mudam o status a partir de uma origem específica; fora
+dela, levantam `ErroTransicaoEstadoInvalida`. Grafo de transições:
+
+| Método | Origem válida | Destino |
+|---|---|---|
+| `registrar_validacao` (fábrica) | — | `validado` / `reprovado-validacao` |
+| `registrar_fotos` | `validado`, `erro-fotos` | `fotos-publicadas` |
+| `registrar_erro_fotos` | `validado`, `erro-fotos` | `erro-fotos` |
+| `registrar_tentativa` (não muda status) | `fotos-publicadas`, `erro-llm` | mesmo status |
+| `registrar_textos` | `fotos-publicadas`, `erro-llm` | `textos-gerados` |
+| `registrar_erro_llm` | `fotos-publicadas`, `erro-llm` | `erro-llm` |
+| `reprovar_qa` | `fotos-publicadas`, `erro-llm` | `reprovado-qa` |
+| `marcar_pronto` | `textos-gerados` | `pronto` |
+| `registrar_verificacao` (não muda status) | `pronto` | `pronto` |
+
+`registrar_tentativa` também acumula `custo_usd_estimado` (parâmetro `custo_usd`, somado ao
+valor atual). Toda mutação atualiza `atualizado_em` para `datetime.now(UTC)`.
+
+**`RepositorioEstadoLoteJson`** — o construtor recebe a raiz do lote (`lotes/<lote>/`) e cria,
+de forma idempotente, `entrada/`, `estado/`, `fotos-processadas/` e `saida/`.
+`copiar_planilha_entrada` é um método separado (não roda no construtor, já que `carregar`/
+`listar`/`salvar` não precisam de uma planilha). `salvar` grava
+`estado/<sku_pai>.json` por escrita atômica: `tempfile.mkstemp` no próprio diretório de destino
++ `Path.replace`; o arquivo temporário é sempre removido no `finally` (fica no disco só se a
+escrita ou a troca falharem antes de completar). `carregar` devolve `None` para SKU sem arquivo;
+JSON corrompido ou com campo faltando vira `ErroEstadoLote` (nunca deixa vazar
+`json.JSONDecodeError`/`KeyError`). `listar` itera `estado/*.json` em ordem alfabética.
+
+Serialização (funções privadas do módulo, `_para_dict`/`_de_dict`): `StatusProduto` ↔ `.value`;
+`Decimal` (`preco` das variações, `custo_usd_estimado`) ↔ `str`; `datetime` (`atualizado_em`) ↔
+ISO 8601 (`datetime.fromisoformat`); `ProdutoEntrada`/`VariacaoEntrada`/`ResultadoValidacao`/
+`ProblemaValidacao` ↔ dicts aninhados montados campo a campo (não usa `dataclasses.asdict`
+genérico, para controlar a conversão de `Decimal` dentro de `VariacaoEntrada.preco`). Os campos
+ainda sem tipo definido (`fotos`, `textos`, `tentativas`, `verificacao`) são serializados como
+JSON puro (dict/list/str/int/float/bool/None) — não suportam `Decimal`/`datetime` aninhados
+enquanto não tiverem um tipo próprio (tasks 07/11/13/17).
+
+**`PoliticaReexecucao.decidir`** — hash da entrada diferente do salvo sempre vence
+(`recomecar`, ponto de partida `validar`); com hash igual, `refazer_fotos` tem prioridade sobre
+`refazer_textos` (ambos retomam de uma etapa e a orquestração — task 15 — percorre em sequência
+até o fim, cobrindo a etapa seguinte de qualquer forma); sem flags, o status por si só já indica
+a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem nenhuma flag é a
+única combinação que resulta em `pular`.
+
+## Limites
+
+- Não orquestra o lote (chamar as etapas na ordem, decidir quando parar) — isso é `ProcessarLote`,
+  task 15. Este módulo só decide/persiste, não executa nada.
+- Nenhum wiring em `config/composicao.py` ou `cli.py` ainda — nenhum subcomando usa este módulo
+  até a task 15 (`processar`).
+- `fotos`/`textos`/`tentativas`/`verificacao` ficam com tipo mínimo (`Mapping[str, object]`/
+  `Mapping[str, str]`); as tasks 07 (`FotoProduto`), 11/13 (`TextosProduto`, tentativa
+  estruturada) e 17 (verificação estruturada) os substituem por dataclasses próprias — quando
+  isso acontecer, a serialização em `infra/repositorio_estado_lote_json.py` precisa ser
+  atualizada junto.
+- `EstadoProduto` é mutável e nada impede reatribuir um campo por fora dos métodos em Python —
+  a garantia é de convenção/revisão de código, não do type checker.
+
+## Testes
+
+- `tests/unit/models/test_estado_produto.py` — todas as transições válidas (uma por método,
+  incluindo a fábrica com resultado aprovado/reprovado) e inválidas (`ErroTransicaoEstadoInvalida`
+  a partir de um status fora da origem esperada); `registrar_tentativa` acumulando custo sem
+  mudar status; `atualizado_em` muda a cada mutação.
+- `tests/unit/services/test_politica_reexecucao.py` — teste parametrizado com a tabela de casos
+  do critério de aceite (14 casos: sem estado anterior, hash diferente, cada status com hash
+  igual, `pronto` com cada combinação de `--refazer-textos`/`--refazer-fotos`).
+- `tests/unit/infra/test_repositorio_estado_lote_json.py` (`tmp_path`) — round-trip
+  `salvar`→`carregar` de um `EstadoProduto` com todos os campos preenchidos (inclusive `Decimal`
+  em `preco` e `custo_usd_estimado`, e `datetime` em `atualizado_em`), `carregar` de SKU
+  inexistente devolve `None`, `listar` traz todos os salvos, construtor cria a árvore de pastas,
+  `copiar_planilha_entrada` copia o arquivo, escrita atômica não deixa `.tmp` para trás,
+  `ErroEstadoLote` para JSON corrompido e para JSON com campo faltando, `salvar` sobrescrevendo
+  um estado existente, status persistido como o enum correto.
+- Nenhum fake de `RepositorioEstadoLote` extraído ainda — sem um segundo consumidor até aqui
+  (a task 15 provavelmente precisará de um `RepositorioEstadoLoteFake` em memória para testar a
+  orquestração sem tocar disco).
+
+## Histórico
+
+- Task 06 (2026-09-14): criação do módulo — `StatusProduto`, `EstadoProduto` (fábrica
+  `registrar_validacao` + 8 métodos de intenção), `RepositorioEstadoLote`/
+  `RepositorioEstadoLoteJson`, `PoliticaReexecucao`. Ver "Desvios e decisões" na spec as-built
+  (`docs/specs/tasks/06-estado-lote.md`) para os pontos em que o texto da task não especificava
+  o suficiente para codar sem decisão de implementação.
