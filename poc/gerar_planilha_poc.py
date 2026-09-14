@@ -187,6 +187,46 @@ PRODUTOS: tuple[ProdutoDummy, ...] = (
         tamanhos=("1", "2", "3"),
         preco_cheio=119.9,
     ),
+    ProdutoDummy(
+        sku="POC-COR-006",
+        nome="POC Teste Grade Cor Inexistente 1 ao 3",
+        marca="somnii",
+        seo_tag_title="POC Teste Grade Cor Inexistente 1 ao 3",
+        seo_tag_description=(
+            "Produto de teste (POC) para o spike da task 03: cor de grade que nao existe "
+            "na loja, para descobrir se a importacao cria o valor novo."
+        ),
+        descricao_html=descricao_html(
+            "Vestido de teste: cor inexistente na grade",
+            "Produto dummy da rodada 3 (spike de grade). Usa uma cor que certamente nao "
+            "esta cadastrada na grade grade-produto-com-uma-cor da loja.",
+            ["Malha canelada 100% algodao", "Disponivel no tamanho 1"],
+            "somnii",
+        ),
+        cores=("Teste Cor Inexistente Kmilaa",),
+        tamanhos=("1",),
+        preco_cheio=119.9,
+    ),
+    ProdutoDummy(
+        sku="POC-COR-007",
+        nome="POC Teste Grade Cor Caixa Diferente 1 ao 3",
+        marca="somnii",
+        seo_tag_title="POC Teste Grade Cor Caixa Diferente 1 ao 3",
+        seo_tag_description=(
+            "Produto de teste (POC) para o spike da task 03: cor existente na grade, mas "
+            "escrita em caixa diferente (beige em vez de Beige)."
+        ),
+        descricao_html=descricao_html(
+            "Vestido de teste: cor em caixa diferente na grade",
+            "Produto dummy da rodada 3 (spike de grade). Usa 'beige' minusculo para ver "
+            "se a importacao liga ao valor 'Beige' ja cadastrado ou cria um duplicado.",
+            ["Malha canelada 100% algodao", "Disponivel no tamanho 1"],
+            "somnii",
+        ),
+        cores=("beige",),
+        tamanhos=("1",),
+        preco_cheio=119.9,
+    ),
 )
 
 

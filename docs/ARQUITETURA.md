@@ -550,13 +550,14 @@ mantendo o QA síncrono.
 que não existe; a descrição se baseia no que a dona da loja informou.
 
 **Validação estrita de cores** — reprova cedo, antes de gastar; o custo é manter a lista mestre
-(413 cores hoje) — ver risco em §14.
+(413 cores hoje). Confirmada como correta pelo spike da task 03 (§14, risco 1 resolvido): a
+própria loja rejeita cor fora da lista, inclusive com caixa diferente.
 
 ## 14. Riscos e questões em aberto
 
 | # | Risco / dúvida | Mitigação / como resolver |
 |---|---|---|
-| 1 | **A importação cria valores novos de grade (cor)?** A exportação tem 413 cores, o que sugere que sim; a regra consolidada diz que não. | Spike na task 03 (importar 1 produto de teste com cor inexistente). Se criar, a validação estrita pode virar "avisa e normaliza" por configuração. |
+| 1 | ~~A importação cria valores novos de grade (cor)?~~ **Resolvido (task 03):** não cria — a loja rejeita a linha com "Cor não permitida em 'grade-produto-com-uma-cor'. Verifique as cores permitidas em: http://cdn.awsli.com.br/download/cores.html" e não ignora caixa (`beige` ≠ `Beige`). | Validação estrita de `DadosMestre.cor_valida` confirmada como correta, sem mudança. Detalhe em `docs/specs/tasks/03-spike-grade-importacao.md` e `poc/REGISTRO_ITERACOES.md` rodada 3. |
 | 2 | Categoria precisa existir no painel; só a formatação é validada. | Relatório lista categorias usadas; aviso quando a categoria não está na lista de referência do `dados_mestre.yaml`. |
 | 3 | Busca pública por título pode não localizar a página (slug divergente). | `verificar` tenta slug previsto do título e busca; registra `nao-localizado` sem falhar o lote. |
 | 4 | Falha silenciosa de imagem na importação (POC rodada 1). | Compressão < 500 KB + `HEAD` na URL antes da planilha + `verificar` acusa produto sem imagem. |

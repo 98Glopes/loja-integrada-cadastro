@@ -105,8 +105,41 @@ Também: `seo-tag-title` sem o sufixo `| Kmilaa Modas` para conferir o `<title>`
 - Variações: página carrega `grades = [8945, 774914]` (grade de cor + grade de tamanho
   infantil) e preço `R$ 119,90` das filhas — pai sem preço não é problema.
 
+### Rodada 3 — a importação cria valor novo de grade (cor)?
+
+Spike da task 03 (risco 1 de `docs/ARQUITETURA.md` §14). Hipóteses:
+
+| SKU pai | Cor testada | Hipótese |
+|---|---|---|
+| `POC-COR-006` | `Teste Cor Inexistente Kmilaa` (não cadastrada) | cria valor novo na grade OU rejeita a linha |
+| `POC-COR-007` | `beige` (minúsculo; grade cadastrada tem `Beige`) | liga ao valor existente ignorando caixa OU rejeita a linha |
+
+- Gerado: `poc/saida/poc-loja-integrada-2026-09-13-spike-grade.xlsx` — 2 pais + 2 filhas, 54
+  colunas (`python poc/gerar_planilha_poc.py --skus POC-COR-006 POC-COR-007 --sufixo spike-grade`).
+- Resultado da importação: **parcial** — "2 linhas de 4 do arquivo
+  produtos-1550699-1789347278.xlsx da loja Kmilaa Modas, foram processadas parcialmente em
+  1.127 seg. Verifique no arquivo em anexo a coluna 'Erro' de cada linha para corrigir e tentar
+  novamente."
+- As duas linhas de filha (variação) foram **rejeitadas** com o mesmo erro na coluna `Erro`:
+  - `POC-COR-006-teste-cor-inexistente-kmilaa-1`: "Cor não permitida em
+    'grade-produto-com-uma-cor'. Verifique as cores permitidas em:
+    http://cdn.awsli.com.br/download/cores.html"
+  - `POC-COR-007-beige-1`: exatamente o mesmo erro — `beige` minúsculo **não** foi ligado ao
+    valor `Beige` já cadastrado; a plataforma tratou como cor inexistente.
+- As 2 linhas de pai (`POC-COR-006`, `POC-COR-007`, tipo `com-variacao`) não aparecem na coluna
+  `Erro` — foram processadas com sucesso, mas ficam **sem nenhuma variação** na loja, já que a
+  única filha de cada uma falhou.
+- **Achado**: a importação **não cria** valor novo de grade de cor — rejeita a linha com erro
+  explícito e uma URL pública com a lista de cores permitidas
+  (`http://cdn.awsli.com.br/download/cores.html`). Também não normaliza caixa: `beige` ≠
+  `Beige` para a plataforma. Confirma a validação estrita de `DadosMestre.cor_valida`
+  (comparação exata, sem normalização) como correta e suficiente — reprovar localmente evita
+  gastar uma tentativa de importação que a loja rejeitaria de qualquer forma.
+
 ## Conclusão
 
-Formato validado ponta a ponta em 2 rodadas (23 linhas, 0 erros). Regras consolidadas em
-`docs/regras-planilha-loja-integrada.md`. Produtos `POC-*` (5 pais, 18 filhas) ficam na loja
-até exclusão manual pelo painel.
+Formato validado ponta a ponta em 2 rodadas (23 linhas, 0 erros). A rodada 3 (spike de grade)
+confirmou que a importação nunca cria valor novo de grade de cor, nem ignora caixa — regras
+consolidadas em `docs/regras-planilha-loja-integrada.md` e `docs/ARQUITETURA.md` §14. Produtos
+`POC-*` (7 pais, 18 filhas — os 2 pais da rodada 3 sem nenhuma filha, pois ambas falharam)
+ficam na loja até exclusão manual pelo painel.

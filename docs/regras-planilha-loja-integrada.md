@@ -63,7 +63,7 @@ Legenda de "Pai/Filha": **P** preenchido só no pai, **F** só na filha, **PF** 
 | 34–38 | `imagem-1` … `-5` | P | não | URL pública `https://` de JPEG. A loja baixa e re-hospeda no CDN (`cdn.awsli.com.br`). Só no pai; não há imagem por variação. ✅ |
 | 39 | `grade-genero` | — | | Nunca usada. |
 | 40 | `grade-produto-com-duas-cores` | — | | Nunca usada. |
-| 41 | `grade-produto-com-uma-cor` | F | ≥1 grade por filha | Nome da cor com a **grafia exata da grade da loja** (`Beige`, `Rosa`, `Preto`, `Branco`, `Vermelho`, `Buff`, `Cinza Claro`…). ✅ |
+| 41 | `grade-produto-com-uma-cor` | F | ≥1 grade por filha | Nome da cor com a **grafia exata da grade da loja** (`Beige`, `Rosa`, `Preto`, `Branco`, `Vermelho`, `Buff`, `Cinza Claro`…). Cor fora da lista — inclusive com caixa diferente, ex. `beige` — é **rejeitada** pela importação (task 03: `Cor não permitida em 'grade-produto-com-uma-cor'`). ✅ |
 | 42–46 | `grade-tamanho-de-anelalianca`, `-calca`, `-camisacamiseta`, `-capacete`, `-tenis` | — | | Grades padrão da plataforma, nunca usadas. |
 | 47 | `grade-tamanho-juvenil-infantil` | — | | **Não usar** (3 linhas legadas). |
 | 48 | `grade-voltagem` | — | | Nunca usada. |
@@ -104,7 +104,7 @@ variacao      sku-pai=3254002    sku=3254002-rosa-1   Rosa   1  ...
 | `<title>` recebe sufixo automático da loja. ✅ | `seo-tag-title` deve ter até ~60 caracteres **sem** `\| Kmilaa Modas`; corrigir a fórmula do Campo 3 do `SKILL.md`. |
 | Imagem só no pai; nenhuma por variação. ✅ | A foto de cada cor entra como `imagem-1..5` do pai (até 5 no total). |
 | Uma das 4 imagens da rodada 1 falhou silenciosamente e não reproduziu na rodada 2. ✅ | O pipeline deve comprimir imagens (< 500 KB) e **verificar após importar** se cada pai ficou com imagem; reimportação **não** altera imagens de produto existente (doc oficial) — a correção é manual ou com produto novo. |
-| Não cria categoria nem grade/valor de grade (a criação de **valor** de grade — cor nova — ainda não foi testada; ver task 03). | Validador confere cores e tamanhos contra a lista mestre antes de gerar; categoria só tem a formatação conferida. |
+| Não cria valor novo de grade de cor — cor fora da lista mestre (mesmo com caixa diferente, ex. `beige` vs `Beige`) é **rejeitada** linha a linha com o erro "Cor não permitida em 'grade-produto-com-uma-cor'. Verifique as cores permitidas em: http://cdn.awsli.com.br/download/cores.html" (confirmado na task 03: spike `POC-COR-006`/`POC-COR-007`, ver `poc/REGISTRO_ITERACOES.md` rodada 3). Criação de categoria segue não testada. ✅ | Validador estrito (`DadosMestre.cor_valida`, comparação exata, sem normalizar caixa) está correto e fica como está: uma cor reprovada localmente nunca seria aceita pela loja mesmo assim. |
 | Após importar não é possível alterar `tipo`, `sku`, `sku-pai`, categorias e imagens. | Erros nesses campos exigem excluir o produto no painel e reimportar. |
 | Páginas 404 por alguns minutos após a importação. ✅ | Verificação pós-importação deve aguardar/retentar. |
 
