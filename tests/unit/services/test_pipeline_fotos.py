@@ -9,6 +9,9 @@ from loja_integrada_cadastro.models.estado_produto import EstadoProduto
 from loja_integrada_cadastro.models.exceptions.erro_processamento_imagem import (
     ErroProcessamentoImagem,
 )
+from loja_integrada_cadastro.models.exceptions.erro_publicacao_imagem import (
+    ErroPublicacaoImagem,
+)
 from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
 from loja_integrada_cadastro.models.resultado_validacao import ResultadoValidacao
 from loja_integrada_cadastro.models.status_produto import StatusProduto
@@ -44,17 +47,31 @@ class _ProcessadorImagemFake:
 
 
 class _ArmazenamentoImagensEmMemoria:
-    """Fake do port `ArmazenamentoImagens`: dict em memória, sem tocar o disco."""
+    """Fake do port `ArmazenamentoImagens`: dict em memória, sem tocar o disco.
 
-    def __init__(self) -> None:
+    `falhar_publicar_em`/`inacessivel_em` simulam, respectivamente, `publicar()` levantando
+    `ErroPublicacaoImagem` e `existe()` devolvendo `False` para uma chave específica.
+    """
+
+    def __init__(
+        self,
+        falhar_publicar_em: str | None = None,
+        inacessivel_em: str | None = None,
+    ) -> None:
         self.publicados: dict[str, bytes] = {}
+        self._falhar_publicar_em = falhar_publicar_em
+        self._inacessivel_em = inacessivel_em
 
     def publicar(self, chave: str, dados: bytes) -> str:
+        if chave == self._falhar_publicar_em:
+            raise ErroPublicacaoImagem(chave, "falha de rede (fake)")
         self.publicados[chave] = dados
         return f"file:///fake/{chave}"
 
     def existe(self, url: str) -> bool:
         chave = url.removeprefix("file:///fake/")
+        if chave == self._inacessivel_em:
+            return False
         return chave in self.publicados
 
 
@@ -155,3 +172,35 @@ class TestProcessar:
         fotos = pipeline.processar(produto, estado)
 
         assert len(fotos) == 1
+
+    def test_falha_ao_publicar_aborta_o_produto(self) -> None:
+        produto = _produto(("Beige",))
+        chave = "produtos/3254002/kiki-conjunto-baby-malha-e-moletom-beige-1.jpg"
+        arquivos = {"Beige": [Path("fotos/3254002/Beige/a.jpg")]}
+        pipeline = PipelineFotos(
+            _CatalogoFotosFake(arquivos),
+            _ProcessadorImagemFake(),
+            _ArmazenamentoImagensEmMemoria(falhar_publicar_em=chave),
+        )
+        estado = _estado(produto)
+
+        with pytest.raises(ErroPublicacaoImagem):
+            pipeline.processar(produto, estado)
+
+        assert estado.status is StatusProduto.ERRO_FOTOS
+
+    def test_foto_publicada_mas_inacessivel_aborta_o_produto(self) -> None:
+        produto = _produto(("Beige",))
+        chave = "produtos/3254002/kiki-conjunto-baby-malha-e-moletom-beige-1.jpg"
+        arquivos = {"Beige": [Path("fotos/3254002/Beige/a.jpg")]}
+        pipeline = PipelineFotos(
+            _CatalogoFotosFake(arquivos),
+            _ProcessadorImagemFake(),
+            _ArmazenamentoImagensEmMemoria(inacessivel_em=chave),
+        )
+        estado = _estado(produto)
+
+        with pytest.raises(ErroPublicacaoImagem):
+            pipeline.processar(produto, estado)
+
+        assert estado.status is StatusProduto.ERRO_FOTOS

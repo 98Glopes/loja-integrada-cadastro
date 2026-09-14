@@ -189,8 +189,8 @@ depende da etapa de textos.
 
 ### 5.3 Processamento e publicação
 
-✅ Passos 1–4 implementados (task 07, `PipelineFotos` + `ProcessadorImagemPillow`); 5–6 (R2
-real) ficam para a task 08.
+✅ Implementado — passos 1–4 na task 07 (`PipelineFotos` + `ProcessadorImagemPillow`), passos
+5–6 (R2 real) na task 08 (`ArmazenamentoImagensR2`).
 
 1. Abrir com Pillow (`pillow-heif` registra HEIC), aplicar orientação EXIF, converter para RGB.
 2. Redimensionar para lado maior ≤ 1600 px.
@@ -203,15 +203,19 @@ real) ficam para a task 08.
    caminho relativo (`produtos/<sku-pai>/<nome>.jpg`) é a `chave` usada depois para publicar no
    R2 (task 08), então o armazenamento local já espelha a estrutura de chaves do bucket.
 5. Publicar no R2 com chave `produtos/<sku-pai>/<nome>.jpg`, `Content-Type: image/jpeg`,
-   `Cache-Control: public, max-age=31536000`. Sempre sobrescreve.
+   `Cache-Control: public, max-age=31536000`. Sempre sobrescreve. ✅ (task 08,
+   `ArmazenamentoImagensR2.publicar`)
 6. URL pública: `<R2_URL_PUBLICA>/produtos/<sku-pai>/<nome>.jpg`. Após o upload, um `HEAD`
    confirma `200 image/jpeg` (a POC teve uma falha silenciosa de imagem na importação; a URL
-   precisa estar acessível antes de ir para a planilha).
+   precisa estar acessível antes de ir para a planilha). ✅ (task 08,
+   `ArmazenamentoImagensR2.existe`, chamado por `PipelineFotos` logo após publicar)
 
-Se uma foto falha ao processar (arquivo corrompido, formato não suportado), o pipeline aborta
-o produto inteiro: nenhuma foto parcial é publicada/contada, o produto vai para `erro-fotos` e
-a exceção (`ErroProcessamentoImagem`) se propaga — decisão confirmada com o usuário na task 07,
-fail-fast em vez de best-effort por foto, para não repetir a falha silenciosa de imagem da POC.
+Se uma foto falha ao processar (arquivo corrompido, formato não suportado) **ou falha ao
+publicar/confirmar acessibilidade no R2**, o pipeline aborta o produto inteiro: nenhuma foto
+parcial é publicada/contada, o produto vai para `erro-fotos` e a exceção
+(`ErroProcessamentoImagem` ou `ErroPublicacaoImagem`) se propaga — decisão confirmada com o
+usuário nas tasks 07/08, fail-fast em vez de best-effort por foto, para não repetir a falha
+silenciosa de imagem da POC.
 
 Seleção das até 5 imagens do pai (a Loja Integrada só aceita imagem no pai): primeiro a foto
 `-1` de cada cor na ordem da planilha, depois as `-2` de cada cor, e assim por diante, até 5.
@@ -220,9 +224,11 @@ sem uso (custo desprezível) e listadas no relatório. ✅ Implementado (task 07
 `SeletorImagensPai`).
 
 Cloudflare R2 é compatível com S3: o conector usa `boto3` com `endpoint_url =
-https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, região `auto`. 🔲 Task 08 — nesta task, o port
-`ArmazenamentoImagens` é implementado por `ArmazenamentoImagensDiretorio`, que grava em
-`fotos-processadas/` e devolve URL `file://` local.
+https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, região `auto`. ✅ Implementado (task 08,
+`ArmazenamentoImagensR2`). `ArmazenamentoImagensDiretorio` (task 07), que grava em
+`fotos-processadas/` e devolve URL `file://` local, continua existindo para testes — ainda não
+há wiring em `config/composicao.py`/`cli.py` escolhendo entre as duas (sem consumidor até a
+task 15, que implementa o comando `processar`; ver ADR-006).
 
 ## 6. Geração de textos por IA
 
@@ -445,13 +451,14 @@ src/loja_integrada_cadastro/
       ✅ erro_transicao_estado_invalida.py  ErroTransicaoEstadoInvalida(sku_pai, status_atual, metodo) (task 06)
       ✅ erro_estado_lote.py         ErroEstadoLote(caminho, motivo) (task 06)
       ✅ erro_processamento_imagem.py  ErroProcessamentoImagem(origem, motivo) (task 07)
-      🔲                             ErroValidacaoEntrada, ErroPublicacaoImagem, ErroGeracaoTexto, ErroConsultaLoja
+      ✅ erro_publicacao_imagem.py     ErroPublicacaoImagem(chave_ou_url, motivo) (task 08)
+      🔲                             ErroValidacaoEntrada, ErroGeracaoTexto, ErroConsultaLoja
   🔲 services/
     🔲 ports/
       ✅ leitor_planilha_entrada.py  LeitorPlanilhaEntrada.ler(caminho) -> list[ProdutoEntrada] (task 04)
       ✅ catalogo_fotos.py           CatalogoFotos.listar(sku_pai) -> dict[cor, list[caminho]]; cores_disponiveis(sku_pai) (task 05)
       ✅ processador_imagem.py       ProcessadorImagem.preparar(origem: Path) -> bytes (JPEG final) (task 07)
-      ✅ armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, dados) -> url; existe(url) -> bool (task 07)
+      ✅ armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, dados) -> url; existe(url) -> bool (task 07; contrato confirmado sem alteração na task 08 — ver ADR-006)
       🔲 cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, schema: type[T]) -> RespostaLlm[T]
       🔲 repositorio_prompts.py      RepositorioPrompts.renderizar(nome, contexto) -> PromptRenderizado
       ✅ repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar() (task 06)
@@ -459,7 +466,7 @@ src/loja_integrada_cadastro/
       🔲 consulta_loja.py            ConsultaLoja.buscar(termo) -> list[url]; pagina(url) -> PaginaProduto
     ✅ validador_entrada.py          ValidadorEntrada(dados_mestre, catalogo_fotos, marcas_com_perfil) (task 05)
     ✅ politica_reexecucao.py        PoliticaReexecucao.decidir(...) -> ResultadoPoliticaReexecucao (task 06)
-    ✅ pipeline_fotos.py             PipelineFotos(catalogo, processador, armazenamento).processar(produto, estado) -> list[FotoProduto] (task 07)
+    ✅ pipeline_fotos.py             PipelineFotos(catalogo, processador, armazenamento).processar(produto, estado) -> list[FotoProduto] (task 07; confirma armazenamento.existe(url) após publicar desde a task 08)
     🔲 agente_copywriter.py          AgenteCopywriter(llm, prompts, recursos)
     🔲 agente_seo.py                 AgenteSeo(llm, prompts, recursos)
     🔲 agente_qa.py                  AgenteQa(llm, prompts, recursos)
@@ -474,7 +481,7 @@ src/loja_integrada_cadastro/
     ✅ catalogo_fotos_diretorio.py             CatalogoFotosDiretorio (task 05)
     ✅ processador_imagem_pillow.py            ProcessadorImagemPillow(lado_max_px, tamanho_max_kb): Pillow + pillow-heif (task 07)
     ✅ armazenamento_imagens_diretorio.py       ArmazenamentoImagensDiretorio(raiz): grava em fotos-processadas/, devolve URL file:// (task 07)
-    🔲 armazenamento_imagens_r2.py            boto3 (S3-compatible) (task 08)
+    ✅ armazenamento_imagens_r2.py            ArmazenamentoImagensR2(bucket, account_id, access_key_id, secret_access_key, url_publica): boto3 (S3-compatible), existe() com httpx.head real (task 08)
     🔲 cliente_llm_anthropic.py               SDK anthropic: parse(), caching, usage, erros → domínio
     🔲 esquemas_llm.py                        modelos pydantic de saída estruturada (por agente)
     🔲 repositorio_prompts_jinja.py           Jinja2 + recursos do pacote
@@ -505,9 +512,9 @@ Regras que as tasks devem respeitar:
 
 Dependências instaladas: `openpyxl`, `python-dotenv` (task 01); `pyyaml` (task 02, com stub
 `types-PyYAML`); `pillow`, `pillow-heif` (task 07 — wheels pré-compiladas confirmadas para
-`cp314-win_amd64`, sem toolchain de compilação necessária no Windows). A adicionar quando a
-task correspondente chegar: `anthropic`, `pydantic`, `jinja2`, `boto3`, `httpx`, `selectolax`
-(+ stub para mypy: `boto3-stubs[s3]`).
+`cp314-win_amd64`, sem toolchain de compilação necessária no Windows); `boto3`, `httpx` (task 08,
+com stub `boto3-stubs[s3]` para mypy). A adicionar quando a task correspondente chegar:
+`anthropic`, `pydantic`, `jinja2`, `selectolax`.
 
 Convenção de lint: exceções de domínio chamam-se `Erro<Nome>`; a regra ruff `N818` (sufixo
 `Error`) está desligada no `pyproject.toml` por isso.
@@ -600,7 +607,7 @@ própria loja rejeita cor fora da lista, inclusive com caixa diferente.
 | 1 | ~~A importação cria valores novos de grade (cor)?~~ **Resolvido (task 03):** não cria — a loja rejeita a linha com "Cor não permitida em 'grade-produto-com-uma-cor'. Verifique as cores permitidas em: http://cdn.awsli.com.br/download/cores.html" e não ignora caixa (`beige` ≠ `Beige`). | Validação estrita de `DadosMestre.cor_valida` confirmada como correta, sem mudança. Detalhe em `docs/specs/tasks/03-spike-grade-importacao.md` e `poc/REGISTRO_ITERACOES.md` rodada 3. |
 | 2 | Categoria precisa existir no painel; só a formatação é validada. | Relatório lista categorias usadas; aviso quando a categoria não está na lista de referência do `dados_mestre.yaml`. |
 | 3 | Busca pública por título pode não localizar a página (slug divergente). | `verificar` tenta slug previsto do título e busca; registra `nao-localizado` sem falhar o lote. |
-| 4 | Falha silenciosa de imagem na importação (POC rodada 1). | Compressão < 500 KB + `HEAD` na URL antes da planilha + `verificar` acusa produto sem imagem. |
+| 4 | ~~Falha silenciosa de imagem na importação (POC rodada 1).~~ **Mitigado (task 08):** compressão < 500 KB (task 07) + `HEAD` real na URL logo após publicar, antes de contar a foto (`ArmazenamentoImagensR2.existe`, `PipelineFotos.processar`) — falha aborta o produto (`erro-fotos`). | `verificar` (task 17) ainda vai acusar produto sem imagem pós-importação, como camada adicional. |
 | 5 | Custo de LLM em lotes grandes. | Cache por marca, ordenação por marca, effort por agente, relatório com custo real; Batches como evolução. |
 | 6 | ~~HEIC no Windows depende de `pillow-heif` (roda binário).~~ **Resolvido (task 07):** wheel pré-compilada `pillow_heif-1.7.0-cp314-cp314-win_amd64` existe e foi testada (`pip install --dry-run` + roundtrip real de encode/decode HEIC no `.venv` do projeto, Python 3.14.6) — nenhum toolchain de compilação necessário. | `ProcessadorImagemPillow` registra `pillow_heif.register_heif_opener()` com `try/except ImportError`: se a lib faltar em outro ambiente, `.heic` falha com `ErroProcessamentoImagem` pedindo JPG/PNG/WEBP (fallback ainda ativo, só não foi necessário aqui). |
 | 7 | Mudança de layout da exportação da loja (nova grade). | Constante versionada + teste opcional contra exportação nova; task de atualização documentada. |
@@ -676,3 +683,23 @@ desvio altera uma decisão de arquitetura (não para desvios locais — esses fi
   modelo (`modelo-entrada`) e o leitor precisam da coluna nova; nenhuma lógica de cálculo de
   faixa é necessária, evitando o caso mal definido de família com escalas misturadas.
 - **Task:** 04.
+
+### ADR-006 — Publicação no R2: contrato do port mantido, sem wiring de CLI, TTL fora do código (14/09/2026)
+- **Contexto:** a task 08 (escrita em outra sessão) descrevia o port `ArmazenamentoImagens` com
+  `publicar(chave, conteudo, content_type)`/`acessivel(url)`, uma flag `--sem-upload` no comando
+  `processar`, e listava "limpeza de fotos antigas" como fora de escopo sem explicar por quê. Na
+  hora de implementar, isso divergia do que a task 07 já tinha construído e documentado
+  (`existe(url)`, sem `content_type`; nenhum wiring de CLI ainda) — três pontos confirmados com o
+  usuário antes de codar.
+- **Decisão:** (1) o port continua `publicar(chave, dados) -> str` / `existe(url) -> bool`, sem
+  renomear nem adicionar `content_type` — `ArmazenamentoImagensR2` fixa `Content-Type:
+  image/jpeg` internamente, já que a pipeline só produz JPEG. (2) Nenhuma flag `--sem-upload` nem
+  wiring em `config/composicao.py`/`cli.py` nesta task — `processar` continua stub até a task 15;
+  a pipeline, quando usada, sempre publica no R2. (3) O TTL de 7 dias das fotos é uma regra de
+  lifecycle do bucket R2, configurada fora deste repositório (painel Cloudflare/IaC) — não por
+  parâmetro de `put_object`, que não expira objetos no S3/R2.
+- **Consequência:** menor ruptura em `PipelineFotos`/`ArmazenamentoImagensDiretorio`/testes já
+  existentes; nenhum código morto de CLI para um comando ainda não implementado; "limpeza de
+  fotos antigas" permanece fora de escopo do código porque é resolvida por configuração de
+  infraestrutura, não por lógica da aplicação.
+- **Task:** 08.
