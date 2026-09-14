@@ -19,7 +19,7 @@ branco.
 | `configuracao-cli` | `config/configuracao.py`, `config/leitor_ambiente.py`, `cli.py`, `.env.exemplo`, subcomandos | 01, 15, 17 | [spec](configuracao-cli.md) |
 | `dados-mestre-recursos` | `models/dados_mestre.py`, `infra/carregador_recursos.py`, `recursos/dados_mestre.yaml`, `scripts/extrair_dados_mestre.py` | 02 | [spec](dados-mestre-recursos.md) |
 | `planilha-entrada` | `models/produto_entrada.py`, `variacao_entrada.py`, port `LeitorPlanilhaEntrada`, leitor e gerador de modelo openpyxl | 04 | [spec](planilha-entrada.md) |
-| `validacao` | `services/validador_entrada.py`, `models/resultado_validacao.py`, port `CatalogoFotos` e implementação em diretório | 05 | — |
+| `validacao` | `services/validador_entrada.py`, `models/resultado_validacao.py`, port `CatalogoFotos` e implementação em diretório | 05 | [spec](validacao.md) |
 | `estado-lote` | `models/estado_produto.py`, `status_produto.py`, port `RepositorioEstadoLote`, implementação JSON, política de reexecução | 06 | — |
 | `fotos` | `models/slug.py`, `foto_produto.py`, `nomeador_fotos.py`, port `ProcessadorImagem` (Pillow), `services/pipeline_fotos.py` | 07 | — |
 | `armazenamento-r2` | port `ArmazenamentoImagens`, `infra/armazenamento_imagens_r2.py` (+ diretório) | 07, 08 | — |

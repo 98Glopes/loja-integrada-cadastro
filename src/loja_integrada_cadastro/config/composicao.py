@@ -1,10 +1,34 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from loja_integrada_cadastro.infra.carregador_recursos import CarregadorRecursos
+from loja_integrada_cadastro.infra.catalogo_fotos_diretorio import CatalogoFotosDiretorio
 from loja_integrada_cadastro.infra.gerador_modelo_entrada_openpyxl import GeradorModeloEntrada
+from loja_integrada_cadastro.infra.leitor_planilha_entrada_openpyxl import (
+    LeitorPlanilhaEntradaOpenpyxl,
+)
+from loja_integrada_cadastro.services.ports.leitor_planilha_entrada import LeitorPlanilhaEntrada
+from loja_integrada_cadastro.services.validador_entrada import ValidadorEntrada
 
 
 def montar_gerador_modelo_entrada() -> GeradorModeloEntrada:
     """Composition root do comando `modelo-entrada`."""
     dados_mestre = CarregadorRecursos().dados_mestre()
     return GeradorModeloEntrada(dados_mestre)
+
+
+def montar_leitor_planilha_entrada() -> LeitorPlanilhaEntrada:
+    """Composition root do leitor de planilha, usado por `validar` e `processar`."""
+    return LeitorPlanilhaEntradaOpenpyxl()
+
+
+def montar_validador_entrada(fotos: Path) -> ValidadorEntrada:
+    """Composition root do comando `validar`.
+
+    `marcas_com_perfil` fica vazio por enquanto (parâmetro simples, ver
+    `docs/tasks/05-validador-entrada.md`); a task 10 liga ao carregador de recursos.
+    """
+    dados_mestre = CarregadorRecursos().dados_mestre()
+    catalogo_fotos = CatalogoFotosDiretorio(fotos)
+    return ValidadorEntrada(dados_mestre, catalogo_fotos)
