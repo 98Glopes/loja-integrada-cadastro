@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from loja_integrada_cadastro.config.configuracao import Configuracao
 from loja_integrada_cadastro.infra.carregador_recursos import CarregadorRecursos
 from loja_integrada_cadastro.infra.catalogo_fotos_diretorio import CatalogoFotosDiretorio
 from loja_integrada_cadastro.infra.gerador_modelo_entrada_openpyxl import GeradorModeloEntrada
+from loja_integrada_cadastro.infra.gerador_textos_dummy import GeradorTextosDummy
 from loja_integrada_cadastro.infra.leitor_planilha_entrada_openpyxl import (
     LeitorPlanilhaEntradaOpenpyxl,
 )
+from loja_integrada_cadastro.services.ports.gerador_textos import GeradorTextos
 from loja_integrada_cadastro.services.ports.leitor_planilha_entrada import LeitorPlanilhaEntrada
 from loja_integrada_cadastro.services.validador_entrada import ValidadorEntrada
 
@@ -32,3 +35,15 @@ def montar_validador_entrada(fotos: Path) -> ValidadorEntrada:
     dados_mestre = CarregadorRecursos().dados_mestre()
     catalogo_fotos = CatalogoFotosDiretorio(fotos)
     return ValidadorEntrada(dados_mestre, catalogo_fotos)
+
+
+def montar_gerador_textos(configuracao: Configuracao) -> GeradorTextos:
+    """Composition root do gerador de textos usado por `processar`.
+
+    Devolve `GeradorTextosDummy` — única implementação até a task 16 trocar para
+    `GeradorTextosIa` (ADR-007). `configuracao` não é usado pelo dummy; o parâmetro existe
+    para a assinatura já ficar estável quando a troca acontecer (a implementação de IA
+    precisa da configuração de modelos/effort/chave da API).
+    """
+    dados_mestre = CarregadorRecursos().dados_mestre()
+    return GeradorTextosDummy(dados_mestre)
