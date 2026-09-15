@@ -4,6 +4,9 @@ from loja_integrada_cadastro.models.estado_produto import EstadoProduto
 from loja_integrada_cadastro.models.exceptions.erro_processamento_imagem import (
     ErroProcessamentoImagem,
 )
+from loja_integrada_cadastro.models.exceptions.erro_publicacao_imagem import (
+    ErroPublicacaoImagem,
+)
 from loja_integrada_cadastro.models.foto_produto import FotoProduto
 from loja_integrada_cadastro.models.nomeador_fotos import NomeadorFotos, SeletorImagensPai
 from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
@@ -14,11 +17,12 @@ from loja_integrada_cadastro.services.ports.processador_imagem import Processado
 
 
 class PipelineFotos:
-    """Nomeia, comprime, grava e escolhe as fotos de um produto (`docs/ARQUITETURA.md` §5).
+    """Nomeia, comprime, publica e escolhe as fotos de um produto (`docs/ARQUITETURA.md` §5).
 
-    Uma falha ao processar qualquer foto aborta o produto inteiro: nenhuma foto parcial é
-    publicada/contada, `estado.registrar_erro_fotos()` é chamado e a exceção é relançada
-    (reexecução é idempotente, pois os nomes são determinísticos).
+    Uma falha ao processar ou publicar qualquer foto — ou confirmar que ela ficou acessível —
+    aborta o produto inteiro: nenhuma foto parcial é contada, `estado.registrar_erro_fotos()` é
+    chamado e a exceção é relançada (reexecução é idempotente, pois os nomes são
+    determinísticos).
     """
 
     def __init__(
@@ -45,6 +49,10 @@ class PipelineFotos:
                     chave = f"produtos/{produto.sku_pai}/{nome}"
                     dados = self._processador.preparar(arquivo)
                     url = self._armazenamento.publicar(chave, dados)
+                    if not self._armazenamento.existe(url):
+                        raise ErroPublicacaoImagem(
+                            chave, "não respondeu 200 (image/jpeg) após publicação"
+                        )
                     fotos.append(
                         FotoProduto(
                             sku_pai=produto.sku_pai,
@@ -57,7 +65,7 @@ class PipelineFotos:
                             bytes=len(dados),
                         )
                     )
-        except ErroProcessamentoImagem:
+        except (ErroProcessamentoImagem, ErroPublicacaoImagem):
             estado.registrar_erro_fotos()
             raise
 

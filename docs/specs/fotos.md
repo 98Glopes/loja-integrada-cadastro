@@ -1,8 +1,8 @@
 # Módulo: fotos
 
 **Responsabilidade:** transformar as fotos brutas de um produto em JPEGs leves com nome SEO
-determinístico, prontos para publicação, e escolher quais até 5 vão para o produto pai.
-**Estado:** implementado pela task 07 · última atualização 2026-09-14 (task 07)
+determinístico, publicá-las e escolher quais até 5 vão para o produto pai.
+**Estado:** implementado pelas tasks 07, 08 · última atualização 2026-09-14 (task 08)
 
 ## Arquivos
 
@@ -10,6 +10,8 @@ determinístico, prontos para publicação, e escolher quais até 5 vão para o 
 - `models/foto_produto.py` — `FotoProduto`
 - `models/nomeador_fotos.py` — `NomeadorFotos`, `SeletorImagensPai`
 - `models/exceptions/erro_processamento_imagem.py` — `ErroProcessamentoImagem`
+- `models/exceptions/erro_publicacao_imagem.py` — `ErroPublicacaoImagem` (módulo
+  `armazenamento-r2`, capturada aqui)
 - `services/ports/processador_imagem.py` — `ProcessadorImagem` (Protocol)
 - `services/pipeline_fotos.py` — `PipelineFotos`
 - `infra/processador_imagem_pillow.py` — `ProcessadorImagemPillow`
@@ -117,19 +119,22 @@ erro (best-effort — ver "Limites"). Qualquer `OSError`/`ValueError` do Pillow 
 **`PipelineFotos.processar(produto, estado)`** — para cada cor em `produto.cores` (ordem da
 planilha), para cada arquivo que `catalogo.listar(produto.sku_pai)` devolve para aquela cor (já
 em ordem alfabética; a cor é casada via `slugificar` para tolerar diferença de acento/caixa
-entre planilha e pasta): nomeia, processa, publica (`armazenamento.publicar`) e monta um
-`FotoProduto`. No fim, `SeletorImagensPai.selecionar` escolhe as imagens do pai e
-`estado.registrar_fotos(fotos, imagens_pai)` é chamado. Qualquer `ErroProcessamentoImagem`
-durante o laço aborta o produto inteiro: `estado.registrar_erro_fotos()` é chamado e a exceção
-é relançada — nenhuma foto parcial é publicada/contada (decisão confirmada com o usuário,
-fail-fast em vez de best-effort por foto; ver `docs/specs/tasks/07-pipeline-fotos.md`).
+entre planilha e pasta): nomeia, processa, publica (`armazenamento.publicar`), **confirma que a
+URL ficou acessível (`armazenamento.existe(url)`; se `False`, levanta `ErroPublicacaoImagem`,
+task 08)** e monta um `FotoProduto`. No fim, `SeletorImagensPai.selecionar` escolhe as imagens
+do pai e `estado.registrar_fotos(fotos, imagens_pai)` é chamado. Qualquer
+`ErroProcessamentoImagem` ou `ErroPublicacaoImagem` durante o laço aborta o produto inteiro:
+`estado.registrar_erro_fotos()` é chamado e a exceção é relançada — nenhuma foto parcial é
+publicada/contada (decisão confirmada com o usuário, fail-fast em vez de best-effort por foto;
+ver `docs/specs/tasks/07-pipeline-fotos.md`).
 
 ## Limites
 
-- Não publica no R2 — depende do port `ArmazenamentoImagens` (módulo `armazenamento-r2`); nesta
-  task, a implementação injetada é sempre a de diretório local (`file://`).
+- Não decide qual implementação de `ArmazenamentoImagens` usar — recebe via construtor (módulo
+  `armazenamento-r2`, que hoje tem a implementação real `ArmazenamentoImagensR2`).
 - Não decide *quando* rodar (orquestração do lote, retomada) — isso é `ProcessarLote`, task 15.
-- Nenhum wiring em `config/composicao.py`/`cli.py` ainda — sem consumidor até a task 15.
+- Nenhum wiring em `config/composicao.py`/`cli.py` ainda — sem consumidor até a task 15; sem
+  flag para pular a publicação (a pipeline sempre publica quando usada, decisão task 08).
 - Best-effort de tamanho: se mesmo em 1200 px/qualidade 60 uma foto ainda exceder
   `tamanho_max_kb`, o pipeline aceita o resultado em vez de falhar o produto — não há reteste
   automático de "ficou X% acima do alvo" no relatório (fica para quando o relatório existir,
@@ -153,11 +158,19 @@ fail-fast em vez de best-effort por foto; ver `docs/specs/tasks/07-pipeline-foto
   `_ProcessadorImagemFake`, `_ArmazenamentoImagensEmMemoria`, duck typing, sem herdar Protocol
   nem `unittest.mock`): caminho feliz (nomes/chaves/round-robin corretos, status
   `fotos-publicadas`), falha no meio do lote (status `erro-fotos`, exceção relançada), cor sem
-  fotos não quebra, cor com acento na planilha casa com pasta sem acento.
+  fotos não quebra, cor com acento na planilha casa com pasta sem acento, falha ao publicar
+  (`ErroPublicacaoImagem`) aborta o produto, foto publicada mas inacessível
+  (`existe() is False`) aborta o produto (task 08).
 - `tests/integration/test_pipeline_fotos_poc.py` (`@pytest.mark.integration`) — pipeline
   completo (com `ProcessadorImagemPillow` e `ArmazenamentoImagensDiretorio` reais, não fakes)
-  sobre as 4 fotos reais de `poc/fotos_input/`: confirma o critério de aceite da task com dado
-  real, não só sintético.
+  sobre as 4 fotos reais de `poc/fotos_input/`: confirma o critério de aceite da task 07 com
+  dado real, não só sintético. Continua gravando local, não toca o R2.
+- `tests/integration/test_pipeline_fotos_r2.py` (`@pytest.mark.integration`, task 08) — mesmo
+  pipeline com `ArmazenamentoImagensR2` real, sobre a mesma estrutura `<sku-pai>/<cor>/` de
+  `tests/fixtures/lote-piloto/fotos/` mas com fotos reais de `poc/fotos_input/` copiadas no
+  lugar (`_copiar_estrutura_com_fotos_reais`) — os JPEGs da fixture do lote piloto são "stub" de
+  22 bytes propositais (task 05), não decodificáveis pelo Pillow real. Confirma o critério de
+  aceite da task 08 (`EstadoProduto.fotos` com URLs `https://` que respondem 200).
 
 ## Histórico
 
@@ -166,3 +179,6 @@ fail-fast em vez de best-effort por foto; ver `docs/specs/tasks/07-pipeline-foto
   "Desvios e decisões" na spec as-built (`docs/specs/tasks/07-pipeline-fotos.md`) para as
   decisões confirmadas com o usuário (fail-fast por produto, motivo de erro não estruturado,
   reinício do loop de qualidade, tipagem de `EstadoProduto.fotos`).
+- Task 08 (2026-09-14): `PipelineFotos` passa a confirmar `armazenamento.existe(url)` após
+  publicar e a capturar `ErroPublicacaoImagem` (além de `ErroProcessamentoImagem`) no mesmo
+  fail-fast. Ver `docs/specs/tasks/08-publicacao-r2.md`.
