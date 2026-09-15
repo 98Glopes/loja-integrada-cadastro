@@ -4,6 +4,7 @@ from loja_integrada_cadastro.config.composicao import (
     montar_gerador_modelo_entrada,
     montar_gerador_textos,
     montar_leitor_planilha_entrada,
+    montar_montador_planilha,
     montar_validador_entrada,
 )
 from loja_integrada_cadastro.config.configuracao import Configuracao
@@ -12,6 +13,7 @@ from loja_integrada_cadastro.infra.gerador_textos_dummy import GeradorTextosDumm
 from loja_integrada_cadastro.infra.leitor_planilha_entrada_openpyxl import (
     LeitorPlanilhaEntradaOpenpyxl,
 )
+from loja_integrada_cadastro.services.montador_planilha import MontadorPlanilha
 from loja_integrada_cadastro.services.validador_entrada import ValidadorEntrada
 
 
@@ -40,3 +42,9 @@ def test_montar_gerador_textos_devolve_gerador_dummy() -> None:
     gerador = montar_gerador_textos(Configuracao())
 
     assert isinstance(gerador, GeradorTextosDummy)
+
+
+def test_montar_montador_planilha_devolve_montador_funcional() -> None:
+    montador = montar_montador_planilha(Configuracao())
+
+    assert isinstance(montador, MontadorPlanilha)

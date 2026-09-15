@@ -26,7 +26,7 @@ branco.
 | `llm-cliente-prompts` | ports `ClienteLlm` e `RepositorioPrompts`, `infra/cliente_llm_anthropic.py`, `esquemas_llm.py`, `repositorio_prompts_jinja.py`, `recursos/precos_llm.yaml` | 12 | — |
 | `geracao-textos` | `models/textos_produto.py`, port `GeradorTextos`, `infra/gerador_textos_dummy.py` (provisório, sai na task 16) | 09 | [spec](geracao-textos.md) |
 | `agentes-textos` | `recursos/{loja,copy,seo,qa}.md`, `recursos/marcas/`, `recursos/prompts/*.j2`, `models/regras_texto.py`, agentes Copywriter/SEO/QA, `services/gerador_textos_ia.py` | 13, 14, 15, 16 | — |
-| `planilha-saida` | `models/layout_planilha_loja_integrada.py`, `linha_planilha.py`, `services/montador_planilha.py`, port `EscritorPlanilhaSaida` | 10 | — |
+| `planilha-saida` | `models/layout_planilha_loja_integrada.py`, `linha_planilha.py`, `services/montador_planilha.py`, port `EscritorPlanilhaSaida` | 10 | [spec](planilha-saida.md) |
 | `processamento-lote-relatorio` | `services/processador_lote.py`, `gerador_relatorio.py`, subcomando `processar` | 11 | — |
 | `verificacao-pos-importacao` | port `ConsultaLoja`, `infra/consulta_loja_http.py`, `services/verificador_importacao.py`, subcomando `verificar` | 18 | — |
 | `evals` | `evals/` (casos, `rodar.py`, `REGISTRO.md`) | 17 | — |

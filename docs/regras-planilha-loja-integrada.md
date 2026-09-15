@@ -39,7 +39,7 @@ Legenda de "Pai/Filha": **P** preenchido só no pai, **F** só na filha, **PF** 
 | 6 | `usado` | PF | — | `N` (100% do catálogo). ✅ |
 | 7 | `destaque` | PF | — | `N` (ou `S` para destacar na home). ✅ |
 | 8 | `ncm` | — | não | Em branco por decisão (`dados_mestre.md`). ✅ |
-| 9 | `gtin` | F | sim na filha | Código de barras da variação, informado na planilha de entrada (decisão de 13/09/2026, `ARQUITETURA.md` §2). Na POC ficou em branco ✅; preenchido ainda não testado em importação real. |
+| 9 | `gtin` | F | sim na filha | Código de barras da variação, informado na planilha de entrada (decisão de 13/09/2026, `ARQUITETURA.md` §2). Na POC ficou em branco; a task 10 passou a preenchê-lo em toda linha filha com `VariacaoEntrada.gtin` — ainda não testado em importação real. |
 | 10 | `mpn` | — | não | Em branco por decisão. ✅ |
 | 11 | `nome` | P | sim no pai | Título do produto. **Gera a URL** (slug: minúsculas, sem acento, hífens). ✅ |
 | 12 | `seo-tag-title` | P | não | Vai para o `<title>`; a loja **anexa** ` - Roupas para Bebê, Infantil e Juvenil \| Kmilaa Modas`. **Não** terminar com `\| Kmilaa Modas`. ✅ |
@@ -64,7 +64,7 @@ Legenda de "Pai/Filha": **P** preenchido só no pai, **F** só na filha, **PF** 
 | 39 | `grade-genero` | — | | Nunca usada. |
 | 40 | `grade-produto-com-duas-cores` | — | | Nunca usada. |
 | 41 | `grade-produto-com-uma-cor` | F | ≥1 grade por filha | Nome da cor com a **grafia exata da grade da loja** (`Beige`, `Rosa`, `Preto`, `Branco`, `Vermelho`, `Buff`, `Cinza Claro`…). Cor fora da lista — inclusive com caixa diferente, ex. `beige` — é **rejeitada** pela importação (task 03: `Cor não permitida em 'grade-produto-com-uma-cor'`). ✅ |
-| 42–46 | `grade-tamanho-de-anelalianca`, `-calca`, `-camisacamiseta`, `-capacete`, `-tenis` | — | | Grades padrão da plataforma, nunca usadas. |
+| 42–46 | `grade-tamanho-de-anelalianca`, `grade-tamanho-de-calca`, `grade-tamanho-de-camisacamiseta`, `grade-tamanho-de-capacete`, `grade-tamanho-de-tenis` | — | | Grades padrão da plataforma, nunca usadas. Nomes corrigidos na task 10 conferindo contra a exportação real (a versão anterior desta tabela tinha `-calca`/`-camisacamiseta`/`-capacete`/`-tenis` sem o `-de-`). ✅ |
 | 47 | `grade-tamanho-juvenil-infantil` | — | | **Não usar** (3 linhas legadas). |
 | 48 | `grade-voltagem` | — | | Nunca usada. |
 | 49 | `grade-colecao` | — | | Grade da loja, nunca usada. |
@@ -117,7 +117,8 @@ variacao      sku-pai=3254002    sku=3254002-rosa-1   Rosa   1  ...
 - Grades: `grade-produto-com-uma-cor` + `grade-tamanho-infantil`; nunca `grade-tamanho-juvenil-infantil`.
 - Filhas: `estoque-gerenciado=S`, `estoque-situacao-em-estoque=imediata`,
   `estoque-situacao-sem-estoque=indisponivel`, `preco-custo=0`, `preco-promocional=0`.
-- Pai e filhas: `usado=N`, `destaque=N`, `preco-sob-consulta=N`; NCM/MPN em branco; `gtin` só nas filhas.
+- Pai e filhas: `usado=N`, `destaque=N`, `preco-sob-consulta=N`; NCM/MPN em branco; `gtin` só
+  nas filhas, preenchido a partir de `VariacaoEntrada.gtin` (task 10).
 - `seo-tag-title` sem sufixo de loja; `seo-tag-description` 140–155 caracteres.
 - Marca com grafia canônica (`dados_mestre.md`).
 

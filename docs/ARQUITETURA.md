@@ -342,13 +342,22 @@ de QA adiciona ~50% naquele produto. O relatório mostra o custo real medido.
 
 ## 7. Montagem da planilha de saída
 
-Segue integralmente `docs/regras-planilha-loja-integrada.md` (54 colunas na ordem da exportação
-real, pai `com-variacao` + filhas `variacao`). A única mudança em relação à POC: coluna `gtin`
-preenchida nas filhas.
+✅ Implementado (task 10). Segue integralmente `docs/regras-planilha-loja-integrada.md` (54
+colunas na ordem da exportação real, pai `com-variacao` + filhas `variacao`). A única mudança
+em relação à POC: coluna `gtin` preenchida nas filhas.
 
 O layout de cabeçalhos é versionado como constante (`models/layout_planilha_loja_integrada.py`,
 54 nomes na ordem exata), com teste que confere contra a exportação real quando o arquivo bruto
-estiver disponível localmente. Motivo: não depender de `docs/brutos/` em runtime.
+estiver disponível localmente. Motivo: não depender de `docs/brutos/` em runtime. Esse teste
+corrigiu 4 nomes de coluna que a documentação trazia errados (`grade-tamanho-de-calca`,
+`-camisacamiseta`, `-capacete`, `-tenis` — faltava o `-de-`).
+
+`MontadorPlanilha.montar(estado)` faz só a transformação (não muda `estado.status`);
+`montar_lote(estados, incluir_reprovados)` filtra `pronto` sempre e, com
+`incluir_reprovados=True`, também incluiria `reprovado-qa` — mas só quando `estado.textos` não
+for `None`, o que hoje nunca acontece (`reprovar_qa`, task 06, não guarda o último texto
+tentado; fecha na task 16). Decisão confirmada com o usuário: escopo reduzido por ora, sem
+falhar nem gerar linha com campos vazios. Ver `docs/specs/planilha-saida.md`.
 
 Mapeamento resumido:
 
@@ -444,8 +453,9 @@ src/loja_integrada_cadastro/
     ✅ textos_produto.py             TextosProduto (4 campos) + como_mapa() (task 09)
     🔲 veredicto_qa.py               VeredictoQa + ProblemaQa
     ✅ estado_produto.py             EstadoProduto (fábrica registrar_validacao + 8 métodos de intenção; `fotos: tuple[FotoProduto, ...]` desde a task 07) e status_produto.py: StatusProduto (Enum) (task 06)
-    🔲 linha_planilha.py             LinhaPlanilha (dict tipado coluna→valor) 
-    🔲 layout_planilha_loja_integrada.py   as 54 colunas, na ordem
+    ✅ linha_planilha.py             LinhaPlanilha (frozen: tipo, valores: Mapping[str, object]) (task 10)
+    ✅ layout_planilha_loja_integrada.py   COLUNAS_PLANILHA_SAIDA (54), COLUNAS_PREENCHIDAS_KMILAA (task 10)
+    ✅ padroes_fisicos.py            PadroesFisicos (frozen: peso_kg, altura_cm, largura_cm, comprimento_cm) (task 10)
     🔲 regras_texto.py               limites e validações de regra dos 4 campos (puras)
     ✅ slug.py                       slugificar(texto) -> str (sem acento, minúsculas, hífens) (task 07)
     ✅ nomeador_fotos.py             NomeadorFotos.nomear(produto, cor, ordem) -> str; SeletorImagensPai.selecionar(fotos) -> list (task 07)
@@ -457,6 +467,7 @@ src/loja_integrada_cadastro/
       ✅ erro_estado_lote.py         ErroEstadoLote(caminho, motivo) (task 06)
       ✅ erro_processamento_imagem.py  ErroProcessamentoImagem(origem, motivo) (task 07)
       ✅ erro_publicacao_imagem.py     ErroPublicacaoImagem(chave_ou_url, motivo) (task 08)
+      ✅ erro_planilha_saida.py        ErroPlanilhaSaida(motivo) (task 10)
       🔲                             ErroValidacaoEntrada, ErroGeracaoTexto, ErroConsultaLoja
   🔲 services/
     🔲 ports/
@@ -468,7 +479,7 @@ src/loja_integrada_cadastro/
       🔲 cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, schema: type[T]) -> RespostaLlm[T]
       🔲 repositorio_prompts.py      RepositorioPrompts.renderizar(nome, contexto) -> PromptRenderizado
       ✅ repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar() (task 06)
-      🔲 escritor_planilha_saida.py  EscritorPlanilhaSaida.escrever(linhas, destino)
+      ✅ escritor_planilha_saida.py  EscritorPlanilhaSaida.escrever(linhas, destino) (task 10)
       🔲 consulta_loja.py            ConsultaLoja.buscar(termo) -> list[url]; pagina(url) -> PaginaProduto
     ✅ validador_entrada.py          ValidadorEntrada(dados_mestre, catalogo_fotos, marcas_com_perfil) (task 05)
     ✅ politica_reexecucao.py        PoliticaReexecucao.decidir(...) -> ResultadoPoliticaReexecucao (task 06)
@@ -477,7 +488,7 @@ src/loja_integrada_cadastro/
     🔲 agente_seo.py                 AgenteSeo(llm, prompts, recursos)
     🔲 agente_qa.py                  AgenteQa(llm, prompts, recursos)
     🔲 gerador_textos_ia.py          GeradorTextosIa: implementa o port GeradorTextos orquestrando os 3 agentes + regras + retry (task 16)
-    🔲 montador_planilha.py          MontadorPlanilha(config_fisica, ativo) -> linhas pai/filhas
+    ✅ montador_planilha.py          MontadorPlanilha(padroes_fisicos, ativo).montar(estado) -> list[LinhaPlanilha]; montar_lote(estados, incluir_reprovados) (task 10)
     🔲 processador_lote.py           ProcessarLote: caso de uso principal (loop sequencial, estado, relatório)
     🔲 gerador_relatorio.py          GeradorRelatorio(estados) -> markdown + dict
     🔲 verificador_importacao.py     VerificarImportacao(consulta_loja, estado)
@@ -494,12 +505,12 @@ src/loja_integrada_cadastro/
     🔲 repositorio_prompts_jinja.py           Jinja2 + recursos do pacote
     ✅ carregador_recursos.py                 lê recursos/ (md, yaml) via importlib.resources (task 02)
     ✅ repositorio_estado_lote_json.py         RepositorioEstadoLoteJson (task 06)
-    🔲 escritor_planilha_saida_openpyxl.py
+    ✅ escritor_planilha_saida_openpyxl.py     EscritorPlanilhaSaidaOpenpyxl: aba única Sheet1, erro acima de 9.997 linhas (task 10)
     🔲 consulta_loja_http.py                  httpx + selectolax
   config/
     ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
     ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
-    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); ✅ montar_gerador_textos() (task 09; troca para IA na 16); 🔲 montar_processador_lote(), montar_verificador()
+    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); ✅ montar_gerador_textos() (task 09; troca para IA na 16); ✅ montar_montador_planilha() (task 10); 🔲 montar_processador_lote(), montar_verificador()
   🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; demais arquivos pendentes)
   ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar (task 05) | processar | verificar (task 01; os 2 últimos "não implementado", código 2)
 ```
@@ -617,7 +628,7 @@ própria loja rejeita cor fora da lista, inclusive com caixa diferente.
 | 4 | ~~Falha silenciosa de imagem na importação (POC rodada 1).~~ **Mitigado (task 08):** compressão < 500 KB (task 07) + `HEAD` real na URL logo após publicar, antes de contar a foto (`ArmazenamentoImagensR2.existe`, `PipelineFotos.processar`) — falha aborta o produto (`erro-fotos`). | `verificar` (task 18) ainda vai acusar produto sem imagem pós-importação, como camada adicional. |
 | 5 | Custo de LLM em lotes grandes. | Cache por marca, ordenação por marca, effort por agente, relatório com custo real; Batches como evolução. |
 | 6 | ~~HEIC no Windows depende de `pillow-heif` (roda binário).~~ **Resolvido (task 07):** wheel pré-compilada `pillow_heif-1.7.0-cp314-cp314-win_amd64` existe e foi testada (`pip install --dry-run` + roundtrip real de encode/decode HEIC no `.venv` do projeto, Python 3.14.6) — nenhum toolchain de compilação necessário. | `ProcessadorImagemPillow` registra `pillow_heif.register_heif_opener()` com `try/except ImportError`: se a lib faltar em outro ambiente, `.heic` falha com `ErroProcessamentoImagem` pedindo JPG/PNG/WEBP (fallback ainda ativo, só não foi necessário aqui). |
-| 7 | Mudança de layout da exportação da loja (nova grade). | Constante versionada + teste opcional contra exportação nova; task de atualização documentada. |
+| 7 | Mudança de layout da exportação da loja (nova grade). | **Mitigado (task 10):** `COLUNAS_PLANILHA_SAIDA` versionada + teste opcional (`pytest.skip` sem o arquivo) que já confirmou o layout contra `docs/brutos/produtos-2026-09-10-*.xlsx` e corrigiu 4 nomes de coluna errados na documentação (`grade-tamanho-de-*`). |
 | 8 | Produto reprovado pelo QA fica fora da planilha (decisão confirmada, §6.2). | Relatório destaca reprovados no topo; CLI encerra com código ≠ 0; `--refazer-textos`/`--incluir-reprovados` para resolver. |
 | 9 | Lote grande demora (execução sequencial, ~40 s/produto). | Estado permite interromper e retomar; evolução documentada em §13 (paralelismo por etapa, Batches) quando lotes passarem de centenas. |
 
