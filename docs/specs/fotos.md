@@ -166,8 +166,11 @@ ver `docs/specs/tasks/07-pipeline-fotos.md`).
   sobre as 4 fotos reais de `poc/fotos_input/`: confirma o critério de aceite da task 07 com
   dado real, não só sintético. Continua gravando local, não toca o R2.
 - `tests/integration/test_pipeline_fotos_r2.py` (`@pytest.mark.integration`, task 08) — mesmo
-  pipeline com `ArmazenamentoImagensR2` real sobre `tests/fixtures/lote-piloto/fotos/`; confirma
-  o critério de aceite da task 08 (`EstadoProduto.fotos` com URLs `https://` que respondem 200).
+  pipeline com `ArmazenamentoImagensR2` real, sobre a mesma estrutura `<sku-pai>/<cor>/` de
+  `tests/fixtures/lote-piloto/fotos/` mas com fotos reais de `poc/fotos_input/` copiadas no
+  lugar (`_copiar_estrutura_com_fotos_reais`) — os JPEGs da fixture do lote piloto são "stub" de
+  22 bytes propositais (task 05), não decodificáveis pelo Pillow real. Confirma o critério de
+  aceite da task 08 (`EstadoProduto.fotos` com URLs `https://` que respondem 200).
 
 ## Histórico
 
