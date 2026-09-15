@@ -99,13 +99,15 @@ Variáveis de ambiente consumidas (já existiam desde a task 01, `Configuracao.e
 - `mypy src` → `Success: no issues found in 47 source files`.
 - `pytest` (unitários, sem os de integração) → `202 passed, 4 deselected`.
 - `/python-clean-architecture:check-quality` sobre os arquivos da mudança → 0 issues.
-- `pytest -m integration tests/integration/test_armazenamento_imagens_r2.py`: falhou nesta
-  sessão com `botocore.exceptions.SSLError: ... SSLV3_ALERT_HANDSHAKE_FAILURE` ao conectar em
-  `*.r2.cloudflarestorage.com`. Diagnosticado como problema de rede/TLS do host (DNS resolve e
-  TCP na porta 443 conecta; o handshake TLS falha igual em `boto3`/Python e num `Invoke-WebRequest`
-  puro do PowerShell, sem nenhum código deste repositório envolvido) — não uma falha de
-  `ArmazenamentoImagensR2`. Provável bloqueio de antivírus/firewall corporativo para domínios de
-  armazenamento em nuvem; não reproduzido/confirmado fora deste host.
+- `pytest -m integration tests/integration/test_armazenamento_imagens_r2.py`: falhou
+  inicialmente com `botocore.exceptions.SSLError: ... SSLV3_ALERT_HANDSHAKE_FAILURE` ao
+  conectar em `*.r2.cloudflarestorage.com`. **Causa real: `R2_ACCOUNT_ID` no `.env` estava com o
+  valor errado** (trocado com o que devia estar em `R2_ACCESS_KEY_ID`), apontando para uma conta
+  R2 inexistente — a borda do Cloudflare resolve DNS e aceita a conexão TCP (subdomínio
+  curinga), mas rejeita o handshake TLS por não ter um namespace de conta válido para rotear
+  (por isso o erro aparecia idêntico em `boto3` e num `Invoke-WebRequest` puro do PowerShell,
+  nada a ver com o código deste repositório). Corrigido o `.env` do usuário (fora deste repo);
+  **teste passa** depois da correção.
 - `pytest -m integration tests/integration/test_pipeline_fotos_r2.py`: achou um bug real no
   teste (não no código de produção) antes mesmo de chegar na rede — corrigido nesta sessão. A
   fixture `tests/fixtures/lote-piloto/fotos/` tem JPEGs "stub" de 22 bytes propositais (task 05,
@@ -114,12 +116,11 @@ Variáveis de ambiente consumidas (já existiam desde a task 01, `Configuracao.e
   `ProcessadorImagemPillow.preparar` real (Pillow) não consegue abri-los
   (`PIL.UnidentifiedImageError`). O teste foi corrigido para espelhar a estrutura
   `<sku-pai>/<cor>/` da fixture, mas com fotos reais de `poc/fotos_input/` no lugar dos stubs
-  (`_copiar_estrutura_com_fotos_reais`). Validado sem tocar o R2: as 8 fotos (6 SKUs) processam
-  com sucesso via Pillow real (79–112 KB cada, abaixo do limite de 500 KB) — só o upload em si
-  não pôde ser confirmado nesta sessão pelo bloqueio de rede acima.
-- `pytest -m integration` completo **não confirmado end-to-end nesta sessão** — publica objetos
-  num bucket R2 real e depende de rede que este host não tem para o domínio do R2; fica para o
-  usuário rodar de um ambiente sem esse bloqueio.
+  (`_copiar_estrutura_com_fotos_reais`). **Teste passa** contra o bucket real depois da correção.
+- `pytest -m integration` completo, rodado pelo usuário após a correção do `.env`: **4 passed,
+  202 deselected** — `test_armazenamento_imagens_r2.py`, `test_pipeline_fotos_poc.py` (2, task
+  07) e `test_pipeline_fotos_r2.py` todos verdes. Critério de aceite da task 08 confirmado
+  ponta a ponta contra o R2 real.
 
 ## Pendências para tasks futuras
 
@@ -127,5 +128,3 @@ Variáveis de ambiente consumidas (já existiam desde a task 01, `Configuracao.e
   `Configuracao`, montar `PipelineFotos` completo) — task 15, junto do comando `processar` real.
 - Confirmar/criar a regra de lifecycle de 7 dias no bucket R2 (fora do código; ação de
   infraestrutura do usuário, não deste repositório).
-- Confirmar `pytest -m integration` (ambos os testes de R2) de um ambiente sem bloqueio de
-  rede/TLS para `*.r2.cloudflarestorage.com` — usuário a validar.
