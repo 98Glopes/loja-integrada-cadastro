@@ -441,7 +441,7 @@ src/loja_integrada_cadastro/
     ✅ problema_linha_planilha.py    ProblemaLinhaPlanilha (linha, coluna, motivo) (task 04)
     ✅ resultado_validacao.py        ProblemaValidacao, ResultadoValidacao {problemas, avisos, aprovado} (task 05)
     ✅ foto_produto.py               FotoProduto (frozen: sku_pai, cor, ordem, arquivo_origem, nome, chave, url, bytes) (task 07)
-    🔲 textos_produto.py             TextosProduto (4 campos) + como_mapa() (task 09)
+    ✅ textos_produto.py             TextosProduto (4 campos) + como_mapa() (task 09)
     🔲 veredicto_qa.py               VeredictoQa + ProblemaQa
     ✅ estado_produto.py             EstadoProduto (fábrica registrar_validacao + 8 métodos de intenção; `fotos: tuple[FotoProduto, ...]` desde a task 07) e status_produto.py: StatusProduto (Enum) (task 06)
     🔲 linha_planilha.py             LinhaPlanilha (dict tipado coluna→valor) 
@@ -464,7 +464,7 @@ src/loja_integrada_cadastro/
       ✅ catalogo_fotos.py           CatalogoFotos.listar(sku_pai) -> dict[cor, list[caminho]]; cores_disponiveis(sku_pai) (task 05)
       ✅ processador_imagem.py       ProcessadorImagem.preparar(origem: Path) -> bytes (JPEG final) (task 07)
       ✅ armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, dados) -> url; existe(url) -> bool (task 07; contrato confirmado sem alteração na task 08 — ver ADR-006)
-      🔲 gerador_textos.py           GeradorTextos.gerar(produto, estado) -> TextosProduto (task 09)
+      ✅ gerador_textos.py           GeradorTextos.gerar(produto, estado) -> TextosProduto (task 09)
       🔲 cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, schema: type[T]) -> RespostaLlm[T]
       🔲 repositorio_prompts.py      RepositorioPrompts.renderizar(nome, contexto) -> PromptRenderizado
       ✅ repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar() (task 06)
@@ -488,7 +488,7 @@ src/loja_integrada_cadastro/
     ✅ processador_imagem_pillow.py            ProcessadorImagemPillow(lado_max_px, tamanho_max_kb): Pillow + pillow-heif (task 07)
     ✅ armazenamento_imagens_diretorio.py       ArmazenamentoImagensDiretorio(raiz): grava em fotos-processadas/, devolve URL file:// (task 07)
     ✅ armazenamento_imagens_r2.py            ArmazenamentoImagensR2(bucket, account_id, access_key_id, secret_access_key, url_publica): boto3 (S3-compatible), existe() com httpx.head real (task 08)
-    🔲 gerador_textos_dummy.py                GeradorTextosDummy: textos determinísticos dentro dos limites de §6.1 — provisório (task 09), removido na task 16 (ADR-007)
+    ✅ gerador_textos_dummy.py                GeradorTextosDummy: textos determinísticos dentro dos limites de §6.1 — provisório (task 09), removido na task 16 (ADR-007)
     🔲 cliente_llm_anthropic.py               SDK anthropic: parse(), caching, usage, erros → domínio
     🔲 esquemas_llm.py                        modelos pydantic de saída estruturada (por agente)
     🔲 repositorio_prompts_jinja.py           Jinja2 + recursos do pacote
@@ -499,7 +499,7 @@ src/loja_integrada_cadastro/
   config/
     ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
     ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
-    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); 🔲 montar_gerador_textos() (task 09; troca para IA na 16), montar_processador_lote(), montar_verificador()
+    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); ✅ montar_gerador_textos() (task 09; troca para IA na 16); 🔲 montar_processador_lote(), montar_verificador()
   🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; demais arquivos pendentes)
   ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar (task 05) | processar | verificar (task 01; os 2 últimos "não implementado", código 2)
 ```
