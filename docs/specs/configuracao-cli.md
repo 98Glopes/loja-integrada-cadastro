@@ -43,8 +43,8 @@
 
 - Não instancia `Configuracao` nem casos de uso ainda — isso entra com `config/composicao.py`
   (tasks 04, 05, 15, 17).
-- Não interpreta `--esperar` (task 17) nem valida `LLM_EFFORT_*` (task 09).
-- Não expõe `--sem-upload`/`--verboso` (task 15).
+- Não interpreta `--esperar` (task 18) nem valida `LLM_EFFORT_*` (task 12).
+- Não expõe `--sem-upload`/`--verboso` (task 11).
 
 ## Testes
 

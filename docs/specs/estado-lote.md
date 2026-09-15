@@ -145,11 +145,11 @@ ISO 8601 (`datetime.fromisoformat`); `ProdutoEntrada`/`VariacaoEntrada`/`Resulta
 compostos — `FotoProduto.arquivo_origem: Path` ↔ `str`, `_foto_para_dict`/`_foto_de_dict`, task
 07). Os campos ainda sem tipo definido (`textos`, `tentativas`, `verificacao`) continuam
 serializados como JSON puro (dict/list/str/int/float/bool/None) enquanto não tiverem um tipo
-próprio (tasks 11/13/17).
+próprio (tasks 09/16/18).
 
 **`PoliticaReexecucao.decidir`** — hash da entrada diferente do salvo sempre vence
 (`recomecar`, ponto de partida `validar`); com hash igual, `refazer_fotos` tem prioridade sobre
-`refazer_textos` (ambos retomam de uma etapa e a orquestração — task 15 — percorre em sequência
+`refazer_textos` (ambos retomam de uma etapa e a orquestração — task 11 — percorre em sequência
 até o fim, cobrindo a etapa seguinte de qualquer forma); sem flags, o status por si só já indica
 a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem nenhuma flag é a
 única combinação que resulta em `pular`.
@@ -157,11 +157,11 @@ a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem 
 ## Limites
 
 - Não orquestra o lote (chamar as etapas na ordem, decidir quando parar) — isso é `ProcessarLote`,
-  task 15. Este módulo só decide/persiste, não executa nada.
+  task 11. Este módulo só decide/persiste, não executa nada.
 - Nenhum wiring em `config/composicao.py` ou `cli.py` ainda — nenhum subcomando usa este módulo
-  até a task 15 (`processar`).
+  até a task 11 (`processar`).
 - `textos`/`tentativas`/`verificacao` ainda ficam com tipo mínimo (`Mapping[str, object]`/
-  `Mapping[str, str]`); `fotos` já foi tipado (`FotoProduto`, task 07). As tasks 11/13
+  `Mapping[str, str]`); `fotos` já foi tipado (`FotoProduto`, task 07). As tasks 09/16
   (`TextosProduto`, tentativa estruturada) e 17 (verificação estruturada) substituem os
   restantes por dataclasses próprias — quando isso acontecer, a serialização em
   `infra/repositorio_estado_lote_json.py` precisa ser atualizada junto (mesmo padrão de
@@ -187,7 +187,7 @@ a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem 
   com campo faltando, `salvar` sobrescrevendo um estado existente, status persistido como o
   enum correto.
 - Nenhum fake de `RepositorioEstadoLote` extraído ainda — sem um segundo consumidor até aqui
-  (a task 15 provavelmente precisará de um `RepositorioEstadoLoteFake` em memória para testar a
+  (a task 11 provavelmente precisará de um `RepositorioEstadoLoteFake` em memória para testar a
   orquestração sem tocar disco).
 
 ## Histórico

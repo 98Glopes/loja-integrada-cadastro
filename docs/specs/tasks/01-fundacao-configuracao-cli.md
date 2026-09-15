@@ -94,7 +94,7 @@ Variáveis de ambiente: exatamente as de `ARQUITETURA.md` §11 (ver `.env.exempl
 | `modelo-entrada` sem argumentos listados na task 01 | `--destino` incluído (padrão `modelo-entrada.xlsx`) | Task 04 já define esse argumento; evita mexer na CLI duas vezes. |
 | Tipos dos padrões físicos não especificados | `Decimal` para `PESO_KG`/`*_CM`; `Path` para `LOTES_DIR` | `Decimal` preserva `0.1` exato ao escrever a planilha; `Path` é o tipo natural para diretório. |
 | `exigir_r2()` "lança ErroConfiguracao" | Retorna `None`; não agrupa credenciais em classe | Arquitetura evolutiva: a task 08 decide se precisa de um VO de credenciais. |
-| `LLM_EFFORT_*` | `str` livre, sem validação | Valores válidos dependem do SDK; a task 09 valida. |
+| `LLM_EFFORT_*` | `str` livre, sem validação | Valores válidos dependem do SDK; a task 12 valida. |
 | "python-dotenv carregar `.env` se existir" | `load_dotenv(".env")` relativo ao cwd, sem sobrescrever variáveis já definidas; só quando `do_ambiente()` é chamado sem `ambiente` | Previsível para CLI instalada; testes injetam `dict` e não tocam o disco. |
 | Mensagem "não implementado" | Escrita em **stderr** | Diagnóstico não é saída de dados. |
 | Uma classe por arquivo | `LeitorAmbiente` em `config/leitor_ambiente.py` | Conversão de env separada do dataclass; ambos em `config/`. |

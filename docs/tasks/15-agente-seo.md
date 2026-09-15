@@ -1,6 +1,6 @@
-# Task 12 — Agente SEO
+# Task 15 — Agente SEO
 
-- **Depende de:** 11
+- **Depende de:** 14
 - **Modelo recomendado:** opus
 - **Leia antes:** `docs/ARQUITETURA.md` §6.1, §6.2; `recursos/seo.md`;
   `docs/regras-planilha-loja-integrada.md` §4 (sufixo do `<title>`)
@@ -8,7 +8,7 @@
 ## Objetivo
 
 Segundo agente: tag title e meta description coerentes com a copy aprovada, dentro dos
-limites da loja, com validação de regra e retry — mesmo desenho da task 11.
+limites da loja, com validação de regra e retry — mesmo desenho da task 14.
 
 ## Escopo
 

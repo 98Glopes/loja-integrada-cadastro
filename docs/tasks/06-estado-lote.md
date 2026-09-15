@@ -20,7 +20,7 @@ retomem do ponto de falha — é o que evita pagar LLM e upload duas vezes.
    `registrar_fotos`, `registrar_tentativa`, `registrar_textos`, `reprovar_qa`,
    `marcar_pronto`, `registrar_verificacao`) que também validam transições de status.
    Os campos ainda sem tipo definido (fotos, textos, tentativas) entram como
-   `tuple`/`dict` tipados de forma mínima e são refinados pelas tasks 07/11/13 — não
+   `tuple`/`dict` tipados de forma mínima e são refinados pelas tasks 07/09/16 — não
    antecipar modelos que não existem ainda.
 3. `services/ports/repositorio_estado_lote.py`: `RepositorioEstadoLote` (Protocol):
    `carregar(sku_pai) -> EstadoProduto | None`, `salvar(estado)`, `listar() -> list[EstadoProduto]`.
@@ -36,7 +36,7 @@ retomem do ponto de falha — é o que evita pagar LLM e upload duas vezes.
 
 ## Fora do escopo
 
-Orquestração do lote (task 15).
+Orquestração do lote (task 11).
 
 ## Critério de aceite
 

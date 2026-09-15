@@ -35,7 +35,7 @@ o catálogo, e avisar sobre o que merece atenção sem bloquear.
    - fotos: cada cor do produto precisa de subpasta com ≥ 1 arquivo.
    - Avisos (não bloqueiam): categoria fora da lista de referência; subpasta de cor sem linha
      na planilha; marca sem perfil próprio (lista de perfis vem de um parâmetro simples por
-     enquanto — a task 10 conecta ao carregador de recursos); produto com mais de 5 fotos no
+     enquanto — a task 13 conecta ao carregador de recursos); produto com mais de 5 fotos no
      total (só 5 serão usadas).
 4. Subcomando `validar --planilha --fotos`: imprime problemas e avisos agrupados por SKU e
    retorna 1 se houver problema. Wiring em `config/composicao.py`.

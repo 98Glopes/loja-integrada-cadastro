@@ -1,6 +1,6 @@
-# Task 16 — Evals dos agentes e calibração dos prompts
+# Task 17 — Evals dos agentes e calibração dos prompts
 
-- **Depende de:** 15
+- **Depende de:** 16
 - **Modelo recomendado:** opus
 - **Leia antes:** `docs/ARQUITETURA.md` §6, §12 (evals); skill `claude-api`, subcomando
   `build-eval` (seguir a entrevista dela: o que avaliar, fonte dos casos, método de

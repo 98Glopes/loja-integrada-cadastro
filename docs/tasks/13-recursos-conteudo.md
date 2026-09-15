@@ -1,6 +1,6 @@
-# Task 10 — Recursos de conteúdo: loja, marcas, copy, SEO e QA
+# Task 13 — Recursos de conteúdo: loja, marcas, copy, SEO e QA
 
-- **Depende de:** 09
+- **Depende de:** 12
 - **Modelo recomendado:** opus
 - **Leia antes:** `docs/ARQUITETURA.md` §6.1, §6.4; `docs/brutos/SKILL.md` (inteiro);
   `docs/brutos/brand_profiles.md` (inteiro); `docs/brutos/dados_mestre.md` §1–2;
@@ -50,7 +50,7 @@ Criar em `src/loja_integrada_cadastro/recursos/`:
 
 ## Fora do escopo
 
-Templates `.j2` e agentes (tasks 11–13).
+Templates `.j2` e agentes (tasks 14–16).
 
 ## Critério de aceite
 

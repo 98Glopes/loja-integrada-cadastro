@@ -97,7 +97,7 @@ def main(argv: list[str]) -> int
 
 | Pedido (task/arquitetura) | Feito | Motivo |
 |---|---|---|
-| Seção `padroes_fisicos` no YAML + campo/método em `DadosMestre` | Removido do escopo | `Configuracao` (task 01) já expõe os mesmos defaults via `.env`; `MontadorPlanilha` (task 14) consome `Configuracao`, não `DadosMestre` — manter os dois seria duas fontes de verdade sem religação. Decisão tomada com o usuário nesta sessão. Ver ADR-004 em `ARQUITETURA.md` §16. |
+| Seção `padroes_fisicos` no YAML + campo/método em `DadosMestre` | Removido do escopo | `Configuracao` (task 01) já expõe os mesmos defaults via `.env`; `MontadorPlanilha` (task 10) consome `Configuracao`, não `DadosMestre` — manter os dois seria duas fontes de verdade sem religação. Decisão tomada com o usuário nesta sessão. Ver ADR-004 em `ARQUITETURA.md` §16. |
 | "46 caminhos observados" (nota informal em `dados_mestre.md` §3) | Extração real produz 45 caminhos | A contagem informal do doc bruto parece ter sido feita à mão; a extração automatizada (determinística, a partir do `.xlsx` real) é a fonte de verdade a partir de agora — a diferença não afeta nada, pois a lista é só referência/aviso, não validação. |
 | Esquema do YAML não especificado em detalhe pela task | `marcas.canonicas`/`marcas.proibidas` aninhados; `cores` como lista de `{nome, uso}`; `tamanhos`/`categorias_referencia` como listas de strings | Estrutura mais simples de validar e testar; seguida a decisão registrada em `docs/specs/README.md` de descrever o que existe. |
 | `DadosMestre` (campos internos) | Campos públicos que espelham as seções do YAML (`marcas_canonicas`, `marcas_proibidas`, ...), sem índice pré-computado | ~9 marcas no catálogo: iterar a cada chamada é trivial e mantém a classe fácil de construir com dados fake nos testes, sem precisar de "alias de si mesma" hardcoded. |
@@ -124,7 +124,7 @@ Mudança de decisão de arquitetura → ADR-004 em `ARQUITETURA.md` §16 (ver ac
 
 ## Pendências para tasks futuras
 
-- Perfis de marca em Markdown (`recursos/marcas/*.md`) e prompts Jinja2 — task 10.
+- Perfis de marca em Markdown (`recursos/marcas/*.md`) e prompts Jinja2 — task 13.
 - Uso de `categoria_conhecida()` pelo validador para emitir aviso (não bloqueio) — task 05.
 - Se algum caso de uso real precisar ler `padroes_fisicos` de um recurso versionado (hoje não
   há), reavaliar a decisão do ADR-004 nessa task.

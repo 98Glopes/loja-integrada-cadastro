@@ -1,6 +1,6 @@
-# Task 17 — Verificação pós-importação e comando `verificar`
+# Task 18 — Verificação pós-importação e comando `verificar`
 
-- **Depende de:** 15
+- **Depende de:** 11
 - **Modelo recomendado:** sonnet
 - **Leia antes:** `docs/ARQUITETURA.md` §9, §14 riscos 3 e 4; `poc/REGISTRO_ITERACOES.md`
   (o que foi conferido no HTML público na POC: `<title>`, meta, CDN, `grades = [...]`,

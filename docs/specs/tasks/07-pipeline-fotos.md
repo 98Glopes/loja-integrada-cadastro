@@ -148,7 +148,7 @@ def registrar_fotos(self, fotos: tuple[FotoProduto, ...], imagens_pai: tuple[str
 
 | Pedido (task/arquitetura) | Feito | Motivo |
 |---|---|---|
-| Task 06 deixou em aberto se `registrar_erro_fotos()` ganharia `motivo: str` | Mantido sem parâmetro | Confirmado com o usuário: motivo trafega na mensagem de `ErroProcessamentoImagem`, capturada e logada por quem chamar o pipeline (fora de escopo — tasks 15/16); menor superfície de mudança em `estado_produto.py`. |
+| Task 06 deixou em aberto se `registrar_erro_fotos()` ganharia `motivo: str` | Mantido sem parâmetro | Confirmado com o usuário: motivo trafega na mensagem de `ErroProcessamentoImagem`, capturada e logada por quem chamar o pipeline (fora de escopo — tasks 11/17); menor superfície de mudança em `estado_produto.py`. |
 | Task não especifica o que fazer quando uma foto individual falha ao processar | Fail-fast por produto: primeira `ErroProcessamentoImagem` aborta o produto, chama `registrar_erro_fotos()` e relança | Confirmado com o usuário: evita repetir a falha silenciosa de imagem da POC (produto com imagem faltando sem ninguém perceber); reexecução é idempotente (nomes determinísticos). |
 | §5.3 não detalha se o fallback de 1200 px reinicia o loop de qualidade em 85 ou usa direto o piso 60 | Reinicia em 85 no tamanho reduzido | Confirmado com o usuário: imagem menor comprime mais fácil, então uma qualidade mais alta ainda deve caber no limite; custo de reencodar é irrelevante em lote. |
 | Caso extremo não coberto pela spec: mesmo em 1200 px/qualidade 60 o arquivo ainda excede 500 KB | Aceita o resultado sem erro (best-effort) | Julgamento técnico, não regra de negócio nova: falhar a foto inteira por poucos KB acima do alvo é pior que publicar levemente acima do limite. |
@@ -178,9 +178,9 @@ def registrar_fotos(self, fotos: tuple[FotoProduto, ...], imagens_pai: tuple[str
 
 - Publicação real no R2 (`infra/armazenamento_imagens_r2.py`, `boto3`) — task 08, mesmo port
   `ArmazenamentoImagens`; o `HEAD` de confirmação pós-upload (§5.3 item 6) também é dela.
-- Nenhum wiring em `config/composicao.py` ou `cli.py` — o comando `processar` (task 15) é quem
+- Nenhum wiring em `config/composicao.py` ou `cli.py` — o comando `processar` (task 11) é quem
   vai montar `PipelineFotos` de verdade; adicionar `montar_pipeline_fotos()` antes disso seria
   antecipar uma camada sem consumidor (arquitetura evolutiva).
 - Motivo estruturado para `erro-fotos` (campo em `EstadoProduto`) continua em aberto — se uma
-  task futura (relatório, tasks 15/16) precisar mostrar por que um produto falhou nas fotos, ela
+  task futura (relatório, tasks 11/17) precisar mostrar por que um produto falhou nas fotos, ela
   decide o formato; por ora a mensagem só existe na exceção capturada no momento da falha.

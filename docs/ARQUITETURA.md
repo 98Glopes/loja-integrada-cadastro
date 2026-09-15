@@ -109,7 +109,7 @@ Etapas por produto (cada uma idempotente e registrada no estado):
 |---|---|---|---|
 | 1 | **Validar** entrada (campos, grafias, cores/tamanhos na lista mestre, GTIN, pasta de fotos existe) | sim | produto `reprovado-validacao`; não entra nas etapas seguintes |
 | 2 | **Fotos**: descobrir, nomear, comprimir, publicar no R2, escolher até 5 URLs para o pai | sim | produto `erro-fotos`; retry na reexecução |
-| 3 | **Textos**: Copywriter → validação de regra → SEO → validação de regra → QA (loop) | não (IA) | `reprovado-qa` após N tentativas, ou `erro-llm` |
+| 3 | **Textos**: Copywriter → validação de regra → SEO → validação de regra → QA (loop). Atrás do port `GeradorTextos`; até a task 16 a implementação é o `GeradorTextosDummy` (determinístico, custo 0 — ADR-007) | não (IA) | `reprovado-qa` após N tentativas, ou `erro-llm` |
 | 4 | **Montar** linhas pai + filhas | sim | erro de programação (não deve ocorrer com entrada validada) |
 | 5 | **Relatar** lote | sim | — |
 
@@ -228,7 +228,7 @@ https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, região `auto`. ✅ Implementado
 `ArmazenamentoImagensR2`). `ArmazenamentoImagensDiretorio` (task 07), que grava em
 `fotos-processadas/` e devolve URL `file://` local, continua existindo para testes — ainda não
 há wiring em `config/composicao.py`/`cli.py` escolhendo entre as duas (sem consumidor até a
-task 15, que implementa o comando `processar`; ver ADR-006).
+task 11, que implementa o comando `processar`; ver ADR-006).
 
 ## 6. Geração de textos por IA
 
@@ -244,6 +244,11 @@ task 15, que implementa o comando `processar`; ver ADR-006).
 Nome das fotos e URL **não** são mais gerados pela IA (ver §5.2 e `regras-planilha…` §4).
 
 ### 6.2 Topologia: Copywriter → SEO → QA
+
+O pipeline enxerga a geração de textos só pelo port `GeradorTextos.gerar(produto, estado) ->
+TextosProduto` (task 09). A topologia abaixo é a implementação de IA desse port
+(`GeradorTextosIa`, task 16); até ela chegar, o `GeradorTextosDummy` ocupa o lugar para o
+`processar` funcionar ponta a ponta (ADR-007).
 
 ```
  dados do produto ──▶ [Copywriter] ──▶ validação de regra ──▶ [SEO] ──▶ validação de regra ──▶ [QA]
@@ -378,10 +383,10 @@ hash_entrada
 validacao: {problemas: [...], avisos: [...]}
 fotos: tuple[FotoProduto, ...]   # {sku_pai, cor, ordem, arquivo_origem, nome, chave, url, bytes} — task 07
 imagens_pai: [url × até 5]
-textos: {titulo, descricao_html, seo_tag_title, seo_tag_description}   # tipo mínimo até as tasks 11/13
+textos: {titulo, descricao_html, seo_tag_title, seo_tag_description}   # tipo mínimo até a task 09 (TextosProduto) e 16 (tentativas)
 tentativas: [{agente, tentativa, modelo, usage, veredito_regra, veredito_qa, request_id, em}]   # idem
 custo_usd_estimado
-verificacao: {em, url_pagina, title_ok, meta_ok, imagens_encontradas, grades_ok, problemas}   # tipo mínimo até a task 17
+verificacao: {em, url_pagina, title_ok, meta_ok, imagens_encontradas, grades_ok, problemas}   # tipo mínimo até a task 18
 atualizado_em
 ```
 
@@ -393,7 +398,7 @@ atualizado_em
 atômica, workspace (`entrada/`, `estado/`, `fotos-processadas/`, `saida/`) criado no construtor.
 
 Reexecução (`PoliticaReexecucao`, `services/politica_reexecucao.py`, ✅ task 06 — o consumo pelo
-comando `processar` é da task 15): produtos `pronto` são pulados; `erro-*` e `reprovado-*` são
+comando `processar` é da task 11): produtos `pronto` são pulados; `erro-*` e `reprovado-*` são
 reprocessados a partir da etapa que falhou; `--refazer-textos <sku>` e `--refazer-fotos <sku>`
 forçam regeneração pontual (`--refazer-fotos` tem prioridade quando os dois aparecem juntos, já
 que retomar de fotos cobre a etapa de textos na sequência). Planilha de entrada alterada →
@@ -436,7 +441,7 @@ src/loja_integrada_cadastro/
     ✅ problema_linha_planilha.py    ProblemaLinhaPlanilha (linha, coluna, motivo) (task 04)
     ✅ resultado_validacao.py        ProblemaValidacao, ResultadoValidacao {problemas, avisos, aprovado} (task 05)
     ✅ foto_produto.py               FotoProduto (frozen: sku_pai, cor, ordem, arquivo_origem, nome, chave, url, bytes) (task 07)
-    🔲 textos_produto.py             TextosProduto (4 campos)
+    🔲 textos_produto.py             TextosProduto (4 campos) + como_mapa() (task 09)
     🔲 veredicto_qa.py               VeredictoQa + ProblemaQa
     ✅ estado_produto.py             EstadoProduto (fábrica registrar_validacao + 8 métodos de intenção; `fotos: tuple[FotoProduto, ...]` desde a task 07) e status_produto.py: StatusProduto (Enum) (task 06)
     🔲 linha_planilha.py             LinhaPlanilha (dict tipado coluna→valor) 
@@ -459,6 +464,7 @@ src/loja_integrada_cadastro/
       ✅ catalogo_fotos.py           CatalogoFotos.listar(sku_pai) -> dict[cor, list[caminho]]; cores_disponiveis(sku_pai) (task 05)
       ✅ processador_imagem.py       ProcessadorImagem.preparar(origem: Path) -> bytes (JPEG final) (task 07)
       ✅ armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, dados) -> url; existe(url) -> bool (task 07; contrato confirmado sem alteração na task 08 — ver ADR-006)
+      🔲 gerador_textos.py           GeradorTextos.gerar(produto, estado) -> TextosProduto (task 09)
       🔲 cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, schema: type[T]) -> RespostaLlm[T]
       🔲 repositorio_prompts.py      RepositorioPrompts.renderizar(nome, contexto) -> PromptRenderizado
       ✅ repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar() (task 06)
@@ -470,7 +476,7 @@ src/loja_integrada_cadastro/
     🔲 agente_copywriter.py          AgenteCopywriter(llm, prompts, recursos)
     🔲 agente_seo.py                 AgenteSeo(llm, prompts, recursos)
     🔲 agente_qa.py                  AgenteQa(llm, prompts, recursos)
-    🔲 gerador_textos.py             GeradorTextos: orquestra os 3 agentes + regras + retry
+    🔲 gerador_textos_ia.py          GeradorTextosIa: implementa o port GeradorTextos orquestrando os 3 agentes + regras + retry (task 16)
     🔲 montador_planilha.py          MontadorPlanilha(config_fisica, ativo) -> linhas pai/filhas
     🔲 processador_lote.py           ProcessarLote: caso de uso principal (loop sequencial, estado, relatório)
     🔲 gerador_relatorio.py          GeradorRelatorio(estados) -> markdown + dict
@@ -482,6 +488,7 @@ src/loja_integrada_cadastro/
     ✅ processador_imagem_pillow.py            ProcessadorImagemPillow(lado_max_px, tamanho_max_kb): Pillow + pillow-heif (task 07)
     ✅ armazenamento_imagens_diretorio.py       ArmazenamentoImagensDiretorio(raiz): grava em fotos-processadas/, devolve URL file:// (task 07)
     ✅ armazenamento_imagens_r2.py            ArmazenamentoImagensR2(bucket, account_id, access_key_id, secret_access_key, url_publica): boto3 (S3-compatible), existe() com httpx.head real (task 08)
+    🔲 gerador_textos_dummy.py                GeradorTextosDummy: textos determinísticos dentro dos limites de §6.1 — provisório (task 09), removido na task 16 (ADR-007)
     🔲 cliente_llm_anthropic.py               SDK anthropic: parse(), caching, usage, erros → domínio
     🔲 esquemas_llm.py                        modelos pydantic de saída estruturada (por agente)
     🔲 repositorio_prompts_jinja.py           Jinja2 + recursos do pacote
@@ -492,7 +499,7 @@ src/loja_integrada_cadastro/
   config/
     ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
     ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
-    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); 🔲 montar_processador_lote(), montar_verificador()
+    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); 🔲 montar_gerador_textos() (task 09; troca para IA na 16), montar_processador_lote(), montar_verificador()
   🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; demais arquivos pendentes)
   ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar (task 05) | processar | verificar (task 01; os 2 últimos "não implementado", código 2)
 ```
@@ -565,7 +572,7 @@ consumir `Configuracao`).
   de ~10 produtos reais com os textos aprovados manualmente hoje (`docs/brutos/` tem os
   exemplos da skill); métricas objetivas (limites, presença da marca, estrutura HTML, palavras
   proibidas) + QA como juiz; relatório por versão de prompt. É o mecanismo para calibrar os
-  prompts sem "achismo" — ver task 16.
+  prompts sem "achismo" — ver task 17.
 - Critério de pronto do projeto: o lote piloto roda ponta a ponta, o `.xlsx` importa na loja
   real sem erro, e `verificar` confirma título, meta e imagens de todos os produtos `pronto`.
 
@@ -607,7 +614,7 @@ própria loja rejeita cor fora da lista, inclusive com caixa diferente.
 | 1 | ~~A importação cria valores novos de grade (cor)?~~ **Resolvido (task 03):** não cria — a loja rejeita a linha com "Cor não permitida em 'grade-produto-com-uma-cor'. Verifique as cores permitidas em: http://cdn.awsli.com.br/download/cores.html" e não ignora caixa (`beige` ≠ `Beige`). | Validação estrita de `DadosMestre.cor_valida` confirmada como correta, sem mudança. Detalhe em `docs/specs/tasks/03-spike-grade-importacao.md` e `poc/REGISTRO_ITERACOES.md` rodada 3. |
 | 2 | Categoria precisa existir no painel; só a formatação é validada. | Relatório lista categorias usadas; aviso quando a categoria não está na lista de referência do `dados_mestre.yaml`. |
 | 3 | Busca pública por título pode não localizar a página (slug divergente). | `verificar` tenta slug previsto do título e busca; registra `nao-localizado` sem falhar o lote. |
-| 4 | ~~Falha silenciosa de imagem na importação (POC rodada 1).~~ **Mitigado (task 08):** compressão < 500 KB (task 07) + `HEAD` real na URL logo após publicar, antes de contar a foto (`ArmazenamentoImagensR2.existe`, `PipelineFotos.processar`) — falha aborta o produto (`erro-fotos`). | `verificar` (task 17) ainda vai acusar produto sem imagem pós-importação, como camada adicional. |
+| 4 | ~~Falha silenciosa de imagem na importação (POC rodada 1).~~ **Mitigado (task 08):** compressão < 500 KB (task 07) + `HEAD` real na URL logo após publicar, antes de contar a foto (`ArmazenamentoImagensR2.existe`, `PipelineFotos.processar`) — falha aborta o produto (`erro-fotos`). | `verificar` (task 18) ainda vai acusar produto sem imagem pós-importação, como camada adicional. |
 | 5 | Custo de LLM em lotes grandes. | Cache por marca, ordenação por marca, effort por agente, relatório com custo real; Batches como evolução. |
 | 6 | ~~HEIC no Windows depende de `pillow-heif` (roda binário).~~ **Resolvido (task 07):** wheel pré-compilada `pillow_heif-1.7.0-cp314-cp314-win_amd64` existe e foi testada (`pip install --dry-run` + roundtrip real de encode/decode HEIC no `.venv` do projeto, Python 3.14.6) — nenhum toolchain de compilação necessário. | `ProcessadorImagemPillow` registra `pillow_heif.register_heif_opener()` com `try/except ImportError`: se a lib faltar em outro ambiente, `.heic` falha com `ErroProcessamentoImagem` pedindo JPG/PNG/WEBP (fallback ainda ativo, só não foi necessário aqui). |
 | 7 | Mudança de layout da exportação da loja (nova grade). | Constante versionada + teste opcional contra exportação nova; task de atualização documentada. |
@@ -657,7 +664,7 @@ desvio altera uma decisão de arquitetura (não para desvios locais — esses fi
 - **Contexto:** a task 02 previa uma seção `padroes_fisicos` no YAML e um campo correspondente
   em `DadosMestre`, mas `Configuracao` (task 01) já expõe `peso_kg`/`altura_cm`/`largura_cm`/
   `comprimento_cm` via `.env` com os mesmos defaults (`0.1`/`4`/`22`/`22`), e o futuro
-  `MontadorPlanilha` (task 14) consome `Configuracao`, não `DadosMestre`, para preencher essas
+  `MontadorPlanilha` (task 10) consome `Configuracao`, não `DadosMestre`, para preencher essas
   colunas na planilha de saída.
 - **Decisão:** `padroes_fisicos` não entra em `dados_mestre.yaml` nem em `DadosMestre`;
   `Configuracao` continua sendo a única fonte desses valores.
@@ -694,7 +701,7 @@ desvio altera uma decisão de arquitetura (não para desvios locais — esses fi
 - **Decisão:** (1) o port continua `publicar(chave, dados) -> str` / `existe(url) -> bool`, sem
   renomear nem adicionar `content_type` — `ArmazenamentoImagensR2` fixa `Content-Type:
   image/jpeg` internamente, já que a pipeline só produz JPEG. (2) Nenhuma flag `--sem-upload` nem
-  wiring em `config/composicao.py`/`cli.py` nesta task — `processar` continua stub até a task 15;
+  wiring em `config/composicao.py`/`cli.py` nesta task — `processar` continua stub até a task 11;
   a pipeline, quando usada, sempre publica no R2. (3) O TTL de 7 dias das fotos é uma regra de
   lifecycle do bucket R2, configurada fora deste repositório (painel Cloudflare/IaC) — não por
   parâmetro de `put_object`, que não expira objetos no S3/R2.
@@ -703,3 +710,24 @@ desvio altera uma decisão de arquitetura (não para desvios locais — esses fi
   fotos antigas" permanece fora de escopo do código porque é resolvida por configuração de
   infraestrutura, não por lógica da aplicação.
 - **Task:** 08.
+
+### ADR-007 — Port `GeradorTextos` e gerador dummy provisório antes da LLM (14/09/2026)
+
+- **Contexto:** com as tasks 01–08 concluídas (validação, estado, fotos e R2 real), a ordem
+  original exigia cinco tasks de LLM (cliente, recursos, três agentes) antes de o `processar`
+  existir. O pipeline, a planilha de saída e o estado poderiam ser provados sem IA — a POC já
+  importou textos dummy com sucesso — e o custo/risco da LLM ficava no caminho crítico.
+- **Decisão:** o seam fica no nível do gerador de textos, não do cliente LLM: port
+  `GeradorTextos.gerar(produto, estado) -> TextosProduto` (task 09). A primeira implementação é
+  `infra/gerador_textos_dummy.py` (`GeradorTextosDummy`): determinística, sem rede, respeita
+  os limites de §6.1 por construção, custo 0, com marca visível de placeholder nos textos.
+  O backlog foi reordenado: 09 port+dummy, 10 montador, 11 `processar` (com dummy), 12–16
+  LLM (antigas 09–13; a 16 entrega `GeradorTextosIa` e troca o wiring), 17 evals, 18
+  `verificar`, 19 piloto.
+- **Consequências:** o `processar` fica funcional ao fim da task 11 (marco intermediário:
+  planilha importável com fotos reais). O dummy é **provisório**: a task 16 o remove de
+  `src/` (vira fake em `tests/` se ainda útil); não há opção de CLI/configuração para
+  escolhê-lo — textos dummy nunca devem ir ao ar, e a planilha de prova da task 11 é
+  importada e removida da loja. `ProcessarLote` depende só do port, então a troca é apenas
+  wiring em `montar_gerador_textos`. `regras_texto.py` continua na task 14 (o dummy não
+  valida, garante por construção).

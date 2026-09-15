@@ -1,21 +1,24 @@
-# Task 15 — `ProcessarLote`: orquestração, relatório e comando `processar`
+# Task 11 — `ProcessarLote`: orquestração, relatório e comando `processar`
 
-- **Depende de:** 08, 13, 14
+- **Depende de:** 08, 09, 10
 - **Modelo recomendado:** sonnet
 - **Leia antes:** `docs/ARQUITETURA.md` §3 (fluxo e tabela de etapas), §8 (workspace,
-  reexecução, relatório), §10, §11, §13 (execução sequencial)
+  reexecução, relatório), §10, §11, §13 (execução sequencial), ADR-007 (dummy provisório)
 
 ## Objetivo
 
 Ligar tudo: validar → fotos → textos → montar → relatar, um produto por vez, com
 estado persistido a cada etapa, e expor pelo subcomando `processar`. Ao final desta task o
-sistema cumpre o objetivo principal do projeto.
+sistema gera uma planilha **importável** com fotos reais no R2 e textos do
+`GeradorTextosDummy` (task 09) — o marco intermediário do roadmap. A task 16 troca o dummy
+pela IA sem mexer neste orquestrador.
 
 ## Escopo
 
 1. `services/processador_lote.py`: `ProcessarLote(validador, pipeline_fotos, gerador_textos,
-   montador, escritor, repositorio_estado, gerador_relatorio, politica_reexecucao)` com
-   `executar(planilha, fotos, lote, opcoes) -> ResumoLote`:
+   montador, escritor, repositorio_estado, gerador_relatorio, politica_reexecucao)` — onde
+   `gerador_textos` é o port `GeradorTextos` (task 09), nunca uma implementação concreta —
+   com `executar(planilha, fotos, lote, opcoes) -> ResumoLote`:
    - lê e valida; grava estado `validado`/`reprovado-validacao` de todos;
    - ordena os aprovados por marca (cache) e processa **um por vez**, em loop simples:
      fotos → textos → `pronto`, salvando o estado após cada etapa e capturando exceções de
@@ -30,7 +33,8 @@ sistema cumpre o objetivo principal do projeto.
 2. `services/gerador_relatorio.py`: `GeradorRelatorio.gerar(estados, resumo) ->
    Relatorio` (markdown + dict) com as seções de §8: resumo, tabela por produto, reprovados
    com motivos (validação e QA, com o último texto), avisos, custo/tokens por agente, lista
-   de categorias usadas, fotos publicadas e não usadas.
+   de categorias usadas, fotos publicadas e não usadas. Com o dummy, a seção de custo/tokens
+   mostra `dummy` com zero — a estrutura já prevê os agentes de IA, não a simplificar.
 3. Port + infra mínimos para escrever o relatório (`EscritorRelatorio` em disco) — ou
    reutilizar o repositório de estado para gravar no workspace, o que for mais simples.
 4. `cli.py`/`config/composicao.py`: `processar --planilha --fotos --lote
@@ -44,12 +48,17 @@ sistema cumpre o objetivo principal do projeto.
 
 ## Fora do escopo
 
-Verificação pós-importação (task 17), evals (task 16).
+Textos por IA (tasks 12–16 — aqui o `processar` usa o dummy), verificação pós-importação
+(task 18), evals (task 17).
 
 ## Critério de aceite
 
-- `processar` sobre a fixture do lote piloto, com API real e R2 real (`.env` do
+- `processar` sobre a fixture do lote piloto, com **gerador dummy** e R2 real (`.env` do
   desenvolvedor): gera `lotes/<lote>/saida/<lote>.xlsx` com os produtos válidos, os 2
-  produtos com erro proposital aparecem no relatório, custo total e por produto no relatório.
-- Rodar de novo o mesmo comando termina em segundos sem nova chamada à API (estado).
+  produtos com erro proposital aparecem no relatório, custo total zerado por produto no
+  relatório.
+- A planilha gerada é importada manualmente no painel da loja (mesma prova da POC) e os
+  produtos aparecem com fotos e grades; os produtos são removidos/desativados em seguida
+  (textos dummy não ficam no ar).
+- Rodar de novo o mesmo comando termina em segundos sem reprocessar fotos (estado).
 - Lint, mypy e pytest passam.

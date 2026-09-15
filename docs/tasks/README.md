@@ -27,20 +27,27 @@ contrato, prompt engineering e revisão final; **sonnet** para código determin�
 | 06 | [Workspace e estado do lote](06-estado-lote.md) | 05 | sonnet | concluída | [spec](../specs/tasks/06-estado-lote.md) — `EstadoProduto` com fábrica `registrar_validacao` + 8 métodos de intenção valida transições; `RepositorioEstadoLoteJson` faz round-trip com `Decimal`/`datetime` e escrita atômica; `PoliticaReexecucao` com 14 casos parametrizados; 165 testes |
 | 07 | [Pipeline de fotos: nomeação e compressão](07-pipeline-fotos.md) | 06 | sonnet | concluída | [spec](../specs/tasks/07-pipeline-fotos.md) — `NomeadorFotos`/`SeletorImagensPai` batem com o exemplo literal do §5.2 e o round-robin do §5.3; `ProcessadorImagemPillow` roda sobre `poc/fotos_input/` real (3000×4000) e produz ≤1600px/<500KB sem EXIF, HEIC testado de verdade; `PipelineFotos` fail-fast por produto; 195 testes |
 | 08 | [Publicação no Cloudflare R2](08-publicacao-r2.md) | 07 | sonnet | concluída | [spec](../specs/tasks/08-publicacao-r2.md) — `ArmazenamentoImagensR2` (boto3) publica com `Content-Type`/`Cache-Control` corretos e confirma acessibilidade com HEAD real antes de contar a foto; falha em qualquer etapa aborta o produto (`erro-fotos`); contrato do port mantido sem alteração (ADR-006); 206 testes, `pytest -m integration` confirmado contra o bucket R2 real (4 passed) |
-| 09 | [Cliente LLM Anthropic e repositório de prompts](09-cliente-llm-prompts.md) | 02 | opus | pendente | |
-| 10 | [Recursos de conteúdo: loja, marcas, copy, SEO, QA](10-recursos-conteudo.md) | 09 | opus | pendente | |
-| 11 | [Agente Copywriter e regras de texto](11-agente-copywriter.md) | 10 | opus | pendente | |
-| 12 | [Agente SEO](12-agente-seo.md) | 11 | opus | pendente | |
-| 13 | [Agente QA e orquestração `GeradorTextos`](13-agente-qa-gerador-textos.md) | 12 | opus | pendente | |
-| 14 | [Montador da planilha de saída](14-montador-planilha-saida.md) | 06 | sonnet | pendente | |
-| 15 | [`ProcessarLote`: orquestração, relatório e comando `processar`](15-processar-lote-relatorio.md) | 08, 13, 14 | sonnet | pendente | |
-| 16 | [Evals dos agentes e calibração dos prompts](16-evals-calibracao.md) | 15 | opus | pendente | |
-| 17 | [Verificação pós-importação e comando `verificar`](17-verificacao-pos-importacao.md) | 15 | sonnet | pendente | |
-| 18 | [Lote piloto real, revisão de arquitetura e relatório final](18-lote-piloto-revisao-final.md) | 16, 17 | opus | pendente | |
+| 09 | [Port `GeradorTextos`, `TextosProduto` e gerador dummy](09-gerador-textos-dummy.md) | 06 | sonnet | pendente | |
+| 10 | [Montador da planilha de saída](10-montador-planilha-saida.md) | 06 | sonnet | pendente | |
+| 11 | [`ProcessarLote`: orquestração, relatório e comando `processar` (com dummy)](11-processar-lote-relatorio.md) | 08, 09, 10 | sonnet | pendente | |
+| 12 | [Cliente LLM Anthropic e repositório de prompts](12-cliente-llm-prompts.md) | 02 | opus | pendente | |
+| 13 | [Recursos de conteúdo: loja, marcas, copy, SEO, QA](13-recursos-conteudo.md) | 12 | opus | pendente | |
+| 14 | [Agente Copywriter e regras de texto](14-agente-copywriter.md) | 13 | opus | pendente | |
+| 15 | [Agente SEO](15-agente-seo.md) | 14 | opus | pendente | |
+| 16 | [Agente QA e orquestração `GeradorTextosIa` (substitui o dummy)](16-agente-qa-gerador-textos.md) | 15, 11 | opus | pendente | |
+| 17 | [Evals dos agentes e calibração dos prompts](17-evals-calibracao.md) | 16 | opus | pendente | |
+| 18 | [Verificação pós-importação e comando `verificar`](18-verificacao-pos-importacao.md) | 11 | sonnet | pendente | |
+| 19 | [Lote piloto real, revisão de arquitetura e relatório final](19-lote-piloto-revisao-final.md) | 17, 18 | opus | pendente | |
 
 Ordem sugerida de execução: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 10 → 11 → 12 → 13
-→ 14 → 15 → 16 → 17 → 18. As tasks 03 e 09/10 podem ser adiantadas se conveniente (não
+→ 14 → 15 → 16 → 17 → 18 → 19. As tasks 03 e 12/13 podem ser adiantadas se conveniente (não
 dependem da cadeia de fotos).
+
+**Marco intermediário (fim da task 11):** o `processar` gera `lotes/<lote>/saida/<lote>.xlsx`
+importável na loja, com fotos reais no R2 e textos do `GeradorTextosDummy` (custo zero, sem
+API). Só então entra a integração com LLM (12–16), que troca o dummy pela IA atrás do mesmo
+port `GeradorTextos` — ver ADR-007 em `docs/ARQUITETURA.md`. Reordenação feita em 14/09/2026
+(antigas 09–13 viraram 12–16; 14→10; 15→11; 16→17; 17→18; 18→19).
 
 Regras válidas para toda task:
 

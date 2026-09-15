@@ -82,7 +82,7 @@ diretamente do escopo da task, de `ARQUITETURA.md` ou de `docs/regras-planilha-l
 ## Pendências para tasks futuras
 
 - `marcas_com_perfil` ligado ao carregador de recursos (hoje é `frozenset()` fixo em
-  `montar_validador_entrada`) — task 10.
+  `montar_validador_entrada`) — task 13.
 - Decodificação real de imagem (HEIC incluído) — task 07, com Pillow/`pillow-heif`.
 - `CatalogoFotosFake` só existe local a `tests/unit/services/test_validador_entrada.py`; extrair
   para um módulo de teste compartilhado se um segundo consumidor precisar dele.

@@ -84,7 +84,7 @@ exatamente a chave publicada no R2 — sem transformação adicional.
   `ArmazenamentoImagensDiretorio` e testes sem um segundo valor de `content_type` real. Ver
   `docs/specs/tasks/08-publicacao-r2.md`.
 - **Sem wiring em `config/composicao.py`/`cli.py`:** o comando `processar` continua stub
-  (`_nao_implementado`) até a task 15, responsável registrada pelo wiring real de CLI (spec da
+  (`_nao_implementado`) até a task 11, responsável registrada pelo wiring real de CLI (spec da
   task 07). Não há flag `--sem-upload` nem modo "local" acionável por linha de comando — a
   pipeline, quando usada, sempre publica no R2. `ArmazenamentoImagensR2` é instanciado
   diretamente onde necessário hoje (testes de integração).

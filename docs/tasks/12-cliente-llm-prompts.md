@@ -1,4 +1,4 @@
-# Task 09 — Cliente LLM Anthropic e repositório de prompts
+# Task 12 — Cliente LLM Anthropic e repositório de prompts
 
 - **Depende de:** 02
 - **Modelo recomendado:** opus
@@ -60,7 +60,7 @@ infraestrutura que os três vão compartilhar.
 
 ## Fora do escopo
 
-Prompts reais dos agentes (tasks 10–13).
+Prompts reais dos agentes (tasks 13–16).
 
 ## Critério de aceite
 

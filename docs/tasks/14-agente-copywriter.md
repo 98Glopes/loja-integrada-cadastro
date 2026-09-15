@@ -1,9 +1,9 @@
-# Task 11 — Agente Copywriter e regras de texto
+# Task 14 — Agente Copywriter e regras de texto
 
-- **Depende de:** 10
+- **Depende de:** 13
 - **Modelo recomendado:** opus
 - **Leia antes:** `docs/ARQUITETURA.md` §6.1, §6.2, §6.3, §6.5, §10; recursos criados na
-  task 10; skill `claude-api` (para revisar o uso do cliente, não reescrevê-lo)
+  task 13; skill `claude-api` (para revisar o uso do cliente, não reescrevê-lo)
 
 ## Objetivo
 
@@ -17,7 +17,7 @@ agente na fixture e ler o resultado.
    `seo_tag_title: str | None`, `seo_tag_description: str | None`) e
    `models/copy_produto.py`: `CopyProduto` (`titulo`, `descricao_html`) como saída do agente.
 2. `models/regras_texto.py` (puro): `RegrasTexto(palavras_proibidas)` com
-   `validar_copy(copy, produto) -> list[ProblemaTexto]` e (para a task 12)
+   `validar_copy(copy, produto) -> list[ProblemaTexto]` e (para a task 15)
    `validar_seo(...)`. Regras da copy: título ≤ 68 e contém a marca canônica; descrição
    ≥ 120 palavras; HTML só com `h2 h3 p ul li strong`, bem formado, com a sequência
    obrigatória (h2, p, p, ul, h3 "Sobre a …", h3 "Compre na Kmilaa Modas"); nenhuma palavra
@@ -33,7 +33,7 @@ agente na fixture e ler o resultado.
    renderiza, chama `llm.gerar(..., CopyProduto)`, valida por regra; se reprovar, reenvia a
    conversa com um turno de usuário listando os problemas (até `LLM_MAX_TENTATIVAS_QA`
    vezes); devolve a copy, a lista de tentativas (com uso/custo) e o veredito final da regra.
-   `feedback` externo (do QA, task 13) entra como turno adicional da mesma forma.
+   `feedback` externo (do QA, task 16) entra como turno adicional da mesma forma.
 5. Testes: `RegrasTexto` com tabela de casos; agente com `ClienteLlmFake` roteirizado
    (1ª resposta com título longo → 2ª resposta válida → confere que a 2ª chamada incluiu a
    mensagem de erro no histórico).

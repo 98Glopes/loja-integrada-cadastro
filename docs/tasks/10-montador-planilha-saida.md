@@ -1,6 +1,6 @@
-# Task 14 — Montador da planilha de saída (Loja Integrada)
+# Task 10 — Montador da planilha de saída (Loja Integrada)
 
-- **Depende de:** 06 (pode ser feita em paralelo às tasks 07–13)
+- **Depende de:** 06 (pode ser feita em paralelo às tasks 07–09)
 - **Modelo recomendado:** sonnet
 - **Leia antes:** `docs/regras-planilha-loja-integrada.md` (inteiro — fonte de verdade do
   formato); `docs/ARQUITETURA.md` §7; `poc/gerar_planilha_poc.py` (lógica validada, a

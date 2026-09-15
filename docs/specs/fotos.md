@@ -132,13 +132,13 @@ ver `docs/specs/tasks/07-pipeline-fotos.md`).
 
 - Não decide qual implementação de `ArmazenamentoImagens` usar — recebe via construtor (módulo
   `armazenamento-r2`, que hoje tem a implementação real `ArmazenamentoImagensR2`).
-- Não decide *quando* rodar (orquestração do lote, retomada) — isso é `ProcessarLote`, task 15.
-- Nenhum wiring em `config/composicao.py`/`cli.py` ainda — sem consumidor até a task 15; sem
+- Não decide *quando* rodar (orquestração do lote, retomada) — isso é `ProcessarLote`, task 11.
+- Nenhum wiring em `config/composicao.py`/`cli.py` ainda — sem consumidor até a task 11; sem
   flag para pular a publicação (a pipeline sempre publica quando usada, decisão task 08).
 - Best-effort de tamanho: se mesmo em 1200 px/qualidade 60 uma foto ainda exceder
   `tamanho_max_kb`, o pipeline aceita o resultado em vez de falhar o produto — não há reteste
   automático de "ficou X% acima do alvo" no relatório (fica para quando o relatório existir,
-  task 15/16, se necessário).
+  task 11/17, se necessário).
 - `EstadoProduto.registrar_erro_fotos()` não recebe motivo estruturado — só a mensagem da
   exceção capturada no momento da falha, fora do estado persistido.
 

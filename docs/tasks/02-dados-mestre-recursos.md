@@ -41,7 +41,7 @@ exportação real, não digitada à mão.
 
 ## Fora do escopo
 
-Prompts e perfis de marca em Markdown (task 10), validador (task 05).
+Prompts e perfis de marca em Markdown (task 13), validador (task 05).
 
 ## Critério de aceite
 

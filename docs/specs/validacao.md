@@ -81,7 +81,7 @@ reprovado (N problema(s), M aviso(s))`); código de saída `0` se aprovado, `1`
 1. **Marca**: `DadosMestre.marca_canonica` resolve canônica ou alias e o produto devolvido já
    vem com `marca` normalizada para a grafia canônica; marca proibida (`motivo_marca_proibida`)
    ou desconhecida vira problema. Marca canônica fora do parâmetro `marcas_com_perfil` vira
-   aviso (lista vazia por padrão em `montar_validador_entrada` — a task 10 liga ao carregador de
+   aviso (lista vazia por padrão em `montar_validador_entrada` — a task 13 liga ao carregador de
    recursos).
 2. **Campos obrigatórios**: `nome_fornecedor`, `tipo_peca`, `composicao`, `detalhes`,
    `faixa_tamanho` e `categoria` vazios viram problema (defesa extra; o leitor de planilha já
@@ -118,7 +118,7 @@ filtrando por `EXTENSOES_ACEITAS` (case-insensitive) e ordenando por nome (case-
 - Não decodifica imagem nenhuma (HEIC incluído) — só extensão e existência de arquivo; abrir e
   processar a imagem é escopo da task 07 (Pillow/`pillow-heif`).
 - `marcas_com_perfil` é um parâmetro simples (`frozenset[str]`); `montar_validador_entrada`
-  passa vazio — toda marca aparece com aviso "sem perfil" até a task 10 ligar ao carregador de
+  passa vazio — toda marca aparece com aviso "sem perfil" até a task 13 ligar ao carregador de
   recursos.
 - Não persiste nada (workspace/estado é a task 06); cada chamada a `validar` é sem estado.
 - Cabeçalho duplicado ou planilha malformada continuam sendo erro do leitor

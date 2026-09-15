@@ -1,6 +1,6 @@
-# Task 18 — Lote piloto real, revisão de arquitetura e relatório final
+# Task 19 — Lote piloto real, revisão de arquitetura e relatório final
 
-- **Depende de:** 16, 17
+- **Depende de:** 17, 18
 - **Modelo recomendado:** opus
 - **Leia antes:** `docs/ARQUITETURA.md` (inteiro), `docs/tasks/README.md` (status de tudo),
   `docs/regras-planilha-loja-integrada.md`

@@ -79,7 +79,7 @@ Variáveis de ambiente: nenhuma (recurso é lido do pacote instalado, não confi
   documentada em `docs/brutos/dados_mestre.md` §2; o script falha (`SystemExit`) se ela não
   existir no YAML de destino.
 - Não versiona perfis de marca em Markdown nem prompts Jinja2 — isso é o módulo
-  `agentes-textos` (task 10).
+  `agentes-textos` (task 13).
 
 ## Testes
 
