@@ -110,8 +110,19 @@ class LeitorPlanilhaEntradaOpenpyxl:
 
     @staticmethod
     def _extrair_valores(linha: Sequence[Any], indice: dict[str, int]) -> dict[str, str | None]:
+        """Lê cada coluna pela posição do cabeçalho.
+
+        `openpyxl` em modo `read_only` devolve, por linha, uma tupla do tamanho da última
+        célula que a planilha guarda naquela linha — se as últimas colunas nunca foram
+        digitadas (comum quando a planilha vem do Excel/Sheets), a tupla fica mais curta que o
+        cabeçalho. Posição fora da tupla é célula vazia, igual a `None` gravado explicitamente.
+        """
         return {
-            coluna: LeitorPlanilhaEntradaOpenpyxl._texto(linha[posicao - 1])
+            coluna: (
+                LeitorPlanilhaEntradaOpenpyxl._texto(linha[posicao - 1])
+                if posicao - 1 < len(linha)
+                else None
+            )
             for coluna, posicao in indice.items()
         }
 

@@ -2,7 +2,7 @@
 
 **Responsabilidade:** transformar a planilha `.xlsx` que a dona da loja preenche em
 `ProdutoEntrada`/`VariacaoEntrada` (domínio puro), e gerar o `.xlsx` modelo que ela preenche.
-**Estado:** implementado pela task 04 · última atualização 2026-09-13 (task 04)
+**Estado:** implementado pela task 04 · última atualização 2026-09-16 (correção pós-task 11)
 
 ## Arquivos
 
@@ -100,6 +100,12 @@ def montar_gerador_modelo_entrada() -> GeradorModeloEntrada: ...
    convertendo `categoria` (`split(">")`, cada segmento sem espaços nas pontas) e `colecao`
    (vazio → `None`).
 
+Linha física mais curta que o cabeçalho (últimas colunas nunca digitadas — comum em planilhas
+vindas do Excel/Google Sheets, onde `openpyxl` em `read_only` devolve uma tupla sem essas
+células, não uma tupla preenchida com `None`) trata as colunas faltando como célula vazia, igual
+a uma célula com `None` explícito — corrigido depois que a task 11 encontrou um `IndexError` de
+verdade rodando `processar` contra uma planilha real do usuário.
+
 Células numéricas puras (ex.: GTIN ou `sku-pai` digitado como número no Excel) são convertidas
 para `str` sem sufixo `.0`; zeros à esquerda perdidos por já terem sido digitados como número
 não são recuperáveis (mitigado no gerador do modelo, que formata essas colunas como texto).
@@ -130,7 +136,8 @@ porque a lista de cores (413 itens) excede o limite de lista inline do Excel.
   linha, conflito de campo de produto, cabeçalho faltando/com coluna extra, ordem de colunas
   livre, preço com vírgula/ponto, linha vazia no meio do grupo, `sku-pai` vazio, estoque/preço
   inválidos, GTIN numérico sem sufixo, múltiplos problemas acumulados num só erro, múltiplos
-  produtos preservando ordem, arquivo inexistente/corrompido.
+  produtos preservando ordem, arquivo inexistente/corrompido, linha fisicamente mais curta que
+  o cabeçalho (célula final nunca escrita) tratada como vazia em vez de `IndexError`.
 - `tests/unit/infra/test_gerador_modelo_entrada_openpyxl.py` — cabeçalho com as 14 colunas
   corretas, 2 linhas de exemplo do mesmo produto, aba `"Listas"` oculta com dados reais de
   `DadosMestre`, `DataValidation` presente nas 3 colunas, formatação de texto em
@@ -147,3 +154,6 @@ porque a lista de cores (413 itens) excede o limite de lista inline do Excel.
   `openpyxl`, gerador do modelo com listas suspensas, primeiro `config/composicao.py`, comando
   `modelo-entrada` implementado. `faixa_tamanho` virou coluna de entrada em vez de propriedade
   derivada (ver ADR-005 em `ARQUITETURA.md` §16).
+- 2026-09-16 (fora do ciclo de task, achado ao usar `processar` real — task 11): corrigido
+  `IndexError` em `_extrair_valores` quando uma linha real (Excel/Sheets) é fisicamente mais
+  curta que o cabeçalho por ter a(s) última(s) coluna(s) nunca digitada(s).
