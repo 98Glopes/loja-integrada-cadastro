@@ -10,6 +10,8 @@ from loja_integrada_cadastro.infra.gerador_textos_dummy import GeradorTextosDumm
 from loja_integrada_cadastro.infra.leitor_planilha_entrada_openpyxl import (
     LeitorPlanilhaEntradaOpenpyxl,
 )
+from loja_integrada_cadastro.models.padroes_fisicos import PadroesFisicos
+from loja_integrada_cadastro.services.montador_planilha import MontadorPlanilha
 from loja_integrada_cadastro.services.ports.gerador_textos import GeradorTextos
 from loja_integrada_cadastro.services.ports.leitor_planilha_entrada import LeitorPlanilhaEntrada
 from loja_integrada_cadastro.services.validador_entrada import ValidadorEntrada
@@ -47,3 +49,14 @@ def montar_gerador_textos(configuracao: Configuracao) -> GeradorTextos:
     """
     dados_mestre = CarregadorRecursos().dados_mestre()
     return GeradorTextosDummy(dados_mestre)
+
+
+def montar_montador_planilha(configuracao: Configuracao) -> MontadorPlanilha:
+    """Composition root do montador da planilha de saída, usado por `processar`."""
+    padroes_fisicos = PadroesFisicos(
+        peso_kg=configuracao.peso_kg,
+        altura_cm=configuracao.altura_cm,
+        largura_cm=configuracao.largura_cm,
+        comprimento_cm=configuracao.comprimento_cm,
+    )
+    return MontadorPlanilha(padroes_fisicos, configuracao.produto_ativo)
