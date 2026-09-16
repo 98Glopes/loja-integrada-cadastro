@@ -226,9 +226,9 @@ sem uso (custo desprezível) e listadas no relatório. ✅ Implementado (task 07
 Cloudflare R2 é compatível com S3: o conector usa `boto3` com `endpoint_url =
 https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, região `auto`. ✅ Implementado (task 08,
 `ArmazenamentoImagensR2`). `ArmazenamentoImagensDiretorio` (task 07), que grava em
-`fotos-processadas/` e devolve URL `file://` local, continua existindo para testes — ainda não
-há wiring em `config/composicao.py`/`cli.py` escolhendo entre as duas (sem consumidor até a
-task 11, que implementa o comando `processar`; ver ADR-006).
+`fotos-processadas/` e devolve URL `file://` local, continua existindo só para testes —
+`processar` (task 11) sempre publica no R2 real (`config/composicao.py::montar_pipeline_fotos`);
+não há opção de armazenamento local por linha de comando (ver ADR-008).
 
 ## 6. Geração de textos por IA
 
@@ -413,10 +413,12 @@ forçam regeneração pontual (`--refazer-fotos` tem prioridade quando os dois a
 que retomar de fotos cobre a etapa de textos na sequência). Planilha de entrada alterada →
 produtos cujo conteúdo mudou (hash da entrada normalizada) voltam ao início (`recomeçar`).
 
-Relatório (`relatorio.md`): resumo (produtos por status, linhas geradas, custo, tempo), tabela
-por produto (SKU, marca, status, título, nº fotos, tentativas, custo), seção de reprovados com
-motivos, seção de avisos (marca sem perfil, subpasta de foto sem cor, fotos não usadas),
-seção de tokens/custo por agente. Não expõe segredos.
+Relatório (`relatorio.md`/`relatorio.json`): resumo (produtos por status, linhas geradas, custo,
+tempo), tabela por produto (SKU, marca, status, título, nº fotos, tentativas, custo), seção de
+reprovados com motivos, seção de avisos (marca sem perfil, subpasta de foto sem cor, fotos não
+usadas), seção de tokens/custo por agente, categorias usadas. Não expõe segredos. ✅ Implementado
+(task 11, `services/gerador_relatorio.py::GeradorRelatorio`) — com o `GeradorTextosDummy` a
+seção de custo/tokens por agente sempre mostra `dummy` com zero, como previsto pelo ADR-007.
 
 ## 9. Verificação pós-importação
 
@@ -456,6 +458,8 @@ src/loja_integrada_cadastro/
     ✅ linha_planilha.py             LinhaPlanilha (frozen: tipo, valores: Mapping[str, object]) (task 10)
     ✅ layout_planilha_loja_integrada.py   COLUNAS_PLANILHA_SAIDA (54), COLUNAS_PREENCHIDAS_KMILAA (task 10)
     ✅ padroes_fisicos.py            PadroesFisicos (frozen: peso_kg, altura_cm, largura_cm, comprimento_cm) (task 10)
+    ✅ resumo_lote.py                ResumoLote (frozen: contagem_por_status, custo_usd_total, duracao_segundos, caminhos) (task 11)
+    ✅ relatorio_lote.py             Relatorio (frozen: markdown, dados) (task 11)
     🔲 regras_texto.py               limites e validações de regra dos 4 campos (puras)
     ✅ slug.py                       slugificar(texto) -> str (sem acento, minúsculas, hífens) (task 07)
     ✅ nomeador_fotos.py             NomeadorFotos.nomear(produto, cor, ordem) -> str; SeletorImagensPai.selecionar(fotos) -> list (task 07)
@@ -478,7 +482,7 @@ src/loja_integrada_cadastro/
       ✅ gerador_textos.py           GeradorTextos.gerar(produto, estado) -> TextosProduto (task 09)
       🔲 cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, schema: type[T]) -> RespostaLlm[T]
       🔲 repositorio_prompts.py      RepositorioPrompts.renderizar(nome, contexto) -> PromptRenderizado
-      ✅ repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar() (task 06)
+      ✅ repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar(), copiar_planilha_entrada(), salvar_relatorio(Relatorio), diretorio_lote() (task 06; 3 últimos task 11)
       ✅ escritor_planilha_saida.py  EscritorPlanilhaSaida.escrever(linhas, destino) (task 10)
       🔲 consulta_loja.py            ConsultaLoja.buscar(termo) -> list[url]; pagina(url) -> PaginaProduto
     ✅ validador_entrada.py          ValidadorEntrada(dados_mestre, catalogo_fotos, marcas_com_perfil) (task 05)
@@ -489,8 +493,8 @@ src/loja_integrada_cadastro/
     🔲 agente_qa.py                  AgenteQa(llm, prompts, recursos)
     🔲 gerador_textos_ia.py          GeradorTextosIa: implementa o port GeradorTextos orquestrando os 3 agentes + regras + retry (task 16)
     ✅ montador_planilha.py          MontadorPlanilha(padroes_fisicos, ativo).montar(estado) -> list[LinhaPlanilha]; montar_lote(estados, incluir_reprovados) (task 10)
-    🔲 processador_lote.py           ProcessarLote: caso de uso principal (loop sequencial, estado, relatório)
-    🔲 gerador_relatorio.py          GeradorRelatorio(estados) -> markdown + dict
+    ✅ processador_lote.py           OpcoesProcessamento + ProcessarLote(...).executar(planilha, fotos, lote, opcoes) -> ResumoLote (task 11)
+    ✅ gerador_relatorio.py          GeradorRelatorio().gerar(estados, resumo) -> Relatorio (task 11)
     🔲 verificador_importacao.py     VerificarImportacao(consulta_loja, estado)
   🔲 infra/
     ✅ leitor_planilha_entrada_openpyxl.py    LeitorPlanilhaEntradaOpenpyxl (task 04)
@@ -510,9 +514,9 @@ src/loja_integrada_cadastro/
   config/
     ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
     ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
-    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); ✅ montar_gerador_textos() (task 09; troca para IA na 16); ✅ montar_montador_planilha() (task 10); 🔲 montar_processador_lote(), montar_verificador()
+    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); ✅ montar_gerador_textos() (task 09; troca para IA na 16); ✅ montar_montador_planilha() (task 10); ✅ montar_pipeline_fotos(), montar_processador_lote() (task 11); 🔲 montar_verificador()
   🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; demais arquivos pendentes)
-  ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar (task 05) | processar | verificar (task 01; os 2 últimos "não implementado", código 2)
+  ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar (task 05) | processar (task 11) | verificar (task 01; "não implementado", código 2)
 ```
 
 Cada task troca para ✅ o que entregou e ajusta nomes/arquivos para os reais. Detalhe do que
@@ -630,7 +634,7 @@ própria loja rejeita cor fora da lista, inclusive com caixa diferente.
 | 6 | ~~HEIC no Windows depende de `pillow-heif` (roda binário).~~ **Resolvido (task 07):** wheel pré-compilada `pillow_heif-1.7.0-cp314-cp314-win_amd64` existe e foi testada (`pip install --dry-run` + roundtrip real de encode/decode HEIC no `.venv` do projeto, Python 3.14.6) — nenhum toolchain de compilação necessário. | `ProcessadorImagemPillow` registra `pillow_heif.register_heif_opener()` com `try/except ImportError`: se a lib faltar em outro ambiente, `.heic` falha com `ErroProcessamentoImagem` pedindo JPG/PNG/WEBP (fallback ainda ativo, só não foi necessário aqui). |
 | 7 | Mudança de layout da exportação da loja (nova grade). | **Mitigado (task 10):** `COLUNAS_PLANILHA_SAIDA` versionada + teste opcional (`pytest.skip` sem o arquivo) que já confirmou o layout contra `docs/brutos/produtos-2026-09-10-*.xlsx` e corrigiu 4 nomes de coluna errados na documentação (`grade-tamanho-de-*`). |
 | 8 | Produto reprovado pelo QA fica fora da planilha (decisão confirmada, §6.2). | Relatório destaca reprovados no topo; CLI encerra com código ≠ 0; `--refazer-textos`/`--incluir-reprovados` para resolver. |
-| 9 | Lote grande demora (execução sequencial, ~40 s/produto). | Estado permite interromper e retomar; evolução documentada em §13 (paralelismo por etapa, Batches) quando lotes passarem de centenas. |
+| 9 | Lote grande demora (execução sequencial, ~40 s/produto). | **Mitigado (task 11):** `Ctrl+C` interrompe o laço sem corromper estado (`ProcessarLote.executar`, captura `KeyboardInterrupt` em volta do laço de produtos) e a reexecução retoma de onde parou; evolução documentada em §13 (paralelismo por etapa, Batches) quando lotes passarem de centenas. |
 
 ## 15. Evolução para serviço web
 
@@ -742,3 +746,20 @@ desvio altera uma decisão de arquitetura (não para desvios locais — esses fi
   importada e removida da loja. `ProcessarLote` depende só do port, então a troca é apenas
   wiring em `montar_gerador_textos`. `regras_texto.py` continua na task 14 (o dummy não
   valida, garante por construção).
+
+### ADR-008 — `processar` sem flag `--sem-upload`: sempre publica no R2 real (16/09/2026)
+
+- **Contexto:** a task 11 (escrita em outra sessão) listava uma flag `--sem-upload` para o
+  comando `processar`, sem definir o comportamento — o sistema já tem
+  `ArmazenamentoImagensDiretorio` (grava local, URL `file://`) ao lado de
+  `ArmazenamentoImagensR2` (real), então a flag poderia alternar entre as duas. Confirmado com
+  o usuário em plan mode antes de codar (ambiguidade de comportamento, não regra de negócio já
+  decidida).
+- **Decisão:** a flag não existe. `config/composicao.py::montar_pipeline_fotos` sempre exige
+  `Configuracao.exigir_r2()` e monta `ArmazenamentoImagensR2` — nenhum branch para
+  armazenamento local no wiring de `processar`.
+- **Consequência:** `ArmazenamentoImagensDiretorio` continua existindo só para testes/uso
+  interno (integração, POC); rodar `processar` sem credenciais R2 configuradas falha cedo com
+  `ErroConfiguracao` nomeando a variável ausente, antes de ler a planilha. Reduz uma decisão de
+  design (semântica da flag) e um caminho de código a menos para manter.
+- **Task:** 11.

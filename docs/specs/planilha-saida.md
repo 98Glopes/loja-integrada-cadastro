@@ -3,7 +3,8 @@
 **Responsabilidade:** transformar um `EstadoProduto` pronto (entrada normalizada + textos +
 imagens do pai) nas linhas pai/filha do layout de 54 colunas da Loja Integrada, e gravar o
 `.xlsx` que a loja importa.
-**Estado:** implementado pela task 10 · última atualização 2026-09-14 (task 10)
+**Estado:** implementado pela task 10 · última atualização 2026-09-16 (consumido pela task 11,
+sem mudança de contrato)
 
 ## Arquivos
 
@@ -150,3 +151,7 @@ grava uma única aba `Sheet1` com `COLUNAS_PLANILHA_SAIDA` no cabeçalho e uma l
   `PadroesFisicos`, `MontadorPlanilha`, `EscritorPlanilhaSaida`/`EscritorPlanilhaSaidaOpenpyxl`,
   `montar_montador_planilha`. Fecha o gap de GTIN deixado pela POC. Ver "Desvios e decisões" na
   spec as-built (`docs/specs/tasks/10-montador-planilha-saida.md`).
+- Task 11 (2026-09-16): primeiro consumidor real — `ProcessarLote` chama `montador.montar(estado)`
+  por produto (antes de `marcar_pronto()`) e `montador.montar_lote(...)` uma vez no fim,
+  escrevendo `saida/<lote>.xlsx` via `EscritorPlanilhaSaidaOpenpyxl` injetado por
+  `config/composicao.py::montar_processador_lote`. Nenhuma mudança de contrato neste módulo.

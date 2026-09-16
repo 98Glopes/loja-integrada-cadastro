@@ -61,21 +61,41 @@ def test_help_lista_os_quatro_subcomandos(capsys: pytest.CaptureFixture[str]) ->
         assert subcomando in ajuda
 
 
-@pytest.mark.parametrize(
-    "argumentos",
-    [
-        ["processar", "--planilha", "p.xlsx", "--fotos", "fotos", "--lote", "lote-1"],
-        ["verificar", "--lote", "lote-1"],
-    ],
-    ids=SUBCOMANDOS[2:],
-)
-def test_subcomando_retorna_2_e_avisa_nao_implementado(
-    argumentos: list[str], capsys: pytest.CaptureFixture[str]
+def test_verificar_retorna_2_e_avisa_nao_implementado(
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    codigo = AplicacaoCli().executar(argumentos)
+    codigo = AplicacaoCli().executar(["verificar", "--lote", "lote-1"])
 
     assert codigo == 2
-    assert f"{argumentos[0]}: não implementado" in capsys.readouterr().err
+    assert "verificar: não implementado" in capsys.readouterr().err
+
+
+def test_processar_sem_configuracao_r2_retorna_erro_de_negocio(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # cwd sem `.env` + variáveis de ambiente do R2 removidas: garante que `Configuracao.
+    # do_ambiente()` (chamada sem argumento por `_processar`, igual à CLI real) não enxerga
+    # nenhuma credencial de verdade, mesmo que o `.env` do desenvolvedor tenha uma.
+    monkeypatch.chdir(tmp_path)
+    for variavel in (
+        "R2_ACCOUNT_ID",
+        "R2_ACCESS_KEY_ID",
+        "R2_SECRET_ACCESS_KEY",
+        "R2_BUCKET",
+        "R2_URL_PUBLICA",
+    ):
+        monkeypatch.delenv(variavel, raising=False)
+
+    codigo = AplicacaoCli().executar(
+        ["processar", "--planilha", "p.xlsx", "--fotos", "fotos", "--lote", "lote-1"]
+    )
+
+    assert codigo == 1
+    assert "processar: Variável de ambiente obrigatória não definida: R2_ACCOUNT_ID" in (
+        capsys.readouterr().err
+    )
 
 
 def test_validar_aprova_planilha_e_fotos_validas(

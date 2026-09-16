@@ -12,6 +12,7 @@ from loja_integrada_cadastro.models.estado_produto import EstadoProduto
 from loja_integrada_cadastro.models.exceptions.erro_estado_lote import ErroEstadoLote
 from loja_integrada_cadastro.models.foto_produto import FotoProduto
 from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
+from loja_integrada_cadastro.models.relatorio_lote import Relatorio
 from loja_integrada_cadastro.models.resultado_validacao import (
     ProblemaValidacao,
     ResultadoValidacao,
@@ -68,6 +69,15 @@ class RepositorioEstadoLoteJson:
             if estado is not None:
                 estados.append(estado)
         return estados
+
+    def diretorio_lote(self) -> Path:
+        return self._lote_dir
+
+    def salvar_relatorio(self, relatorio: Relatorio) -> None:
+        (self._lote_dir / "relatorio.md").write_text(relatorio.markdown, encoding="utf-8")
+        (self._lote_dir / "relatorio.json").write_text(
+            json.dumps(relatorio.dados, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     def _caminho(self, sku_pai: str) -> Path:
         return self._estado_dir / f"{sku_pai}.json"

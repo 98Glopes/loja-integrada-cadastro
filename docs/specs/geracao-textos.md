@@ -3,7 +3,8 @@
 **Responsabilidade:** produzir os 4 campos de texto de um produto (título, descrição HTML, tag
 title, meta description) atrás de um único port, para o pipeline não conhecer se o texto veio
 de um gerador dummy ou de LLM.
-**Estado:** implementado pela task 09 · última atualização 2026-09-14 (task 09)
+**Estado:** implementado pela task 09 · última atualização 2026-09-16 (consumido pela task 11,
+sem mudança de contrato)
 
 ## Arquivos
 
@@ -25,14 +26,17 @@ class TextosProduto:
 
     def como_mapa(self) -> Mapping[str, str]: ...
 
+
 # services/ports/gerador_textos.py
 class GeradorTextos(Protocol):
     def gerar(self, produto: ProdutoEntrada, estado: EstadoProduto) -> TextosProduto: ...
+
 
 # infra/gerador_textos_dummy.py
 class GeradorTextosDummy:
     def __init__(self, dados_mestre: DadosMestre) -> None: ...
     def gerar(self, produto: ProdutoEntrada, estado: EstadoProduto) -> TextosProduto: ...
+
 
 # config/composicao.py
 def montar_gerador_textos(configuracao: Configuracao) -> GeradorTextos: ...
@@ -95,8 +99,8 @@ pelo dummy (existe só para a assinatura já ficar estável para a task 16).
   determinismo, exatamente uma tentativa com custo 0, round-trip
   `como_mapa()` → `registrar_textos` → `RepositorioEstadoLoteJson`.
 - `tests/unit/config/test_composicao.py` — `montar_gerador_textos` devolve `GeradorTextosDummy`.
-- Nenhum fake de `GeradorTextos` extraído ainda — sem um segundo consumidor até aqui
-  (`ProcessarLote`, task 11, provavelmente vai precisar de um `GeradorTextosFake` em memória).
+- Nenhum fake de `GeradorTextos` extraído para um módulo compartilhado — `_GeradorTextosFake`
+  de `tests/unit/services/test_processador_lote.py` (task 11) é local ao arquivo de teste.
 
 ## Histórico
 
@@ -105,3 +109,6 @@ pelo dummy (existe só para a assinatura já ficar estável para a task 16).
   (`docs/specs/tasks/09-gerador-textos-dummy.md`) para os pontos confirmados com o usuário
   (placeholder também no título, marca literal, estrutura da descrição com `p` após cada
   `h3`).
+- Task 11 (2026-09-16): primeiro consumidor real — `ProcessarLote` chama
+  `gerador_textos.gerar(estado.entrada, estado)` e `estado.registrar_textos(textos.como_mapa())`
+  na etapa de textos do laço por produto. Nenhuma mudança de contrato neste módulo.

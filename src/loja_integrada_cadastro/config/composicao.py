@@ -3,17 +3,27 @@ from __future__ import annotations
 from pathlib import Path
 
 from loja_integrada_cadastro.config.configuracao import Configuracao
+from loja_integrada_cadastro.infra.armazenamento_imagens_r2 import ArmazenamentoImagensR2
 from loja_integrada_cadastro.infra.carregador_recursos import CarregadorRecursos
 from loja_integrada_cadastro.infra.catalogo_fotos_diretorio import CatalogoFotosDiretorio
+from loja_integrada_cadastro.infra.escritor_planilha_saida_openpyxl import (
+    EscritorPlanilhaSaidaOpenpyxl,
+)
 from loja_integrada_cadastro.infra.gerador_modelo_entrada_openpyxl import GeradorModeloEntrada
 from loja_integrada_cadastro.infra.gerador_textos_dummy import GeradorTextosDummy
 from loja_integrada_cadastro.infra.leitor_planilha_entrada_openpyxl import (
     LeitorPlanilhaEntradaOpenpyxl,
 )
+from loja_integrada_cadastro.infra.processador_imagem_pillow import ProcessadorImagemPillow
+from loja_integrada_cadastro.infra.repositorio_estado_lote_json import RepositorioEstadoLoteJson
 from loja_integrada_cadastro.models.padroes_fisicos import PadroesFisicos
+from loja_integrada_cadastro.services.gerador_relatorio import GeradorRelatorio
 from loja_integrada_cadastro.services.montador_planilha import MontadorPlanilha
+from loja_integrada_cadastro.services.pipeline_fotos import PipelineFotos
+from loja_integrada_cadastro.services.politica_reexecucao import PoliticaReexecucao
 from loja_integrada_cadastro.services.ports.gerador_textos import GeradorTextos
 from loja_integrada_cadastro.services.ports.leitor_planilha_entrada import LeitorPlanilhaEntrada
+from loja_integrada_cadastro.services.processador_lote import ProcessarLote
 from loja_integrada_cadastro.services.validador_entrada import ValidadorEntrada
 
 
@@ -60,3 +70,46 @@ def montar_montador_planilha(configuracao: Configuracao) -> MontadorPlanilha:
         comprimento_cm=configuracao.comprimento_cm,
     )
     return MontadorPlanilha(padroes_fisicos, configuracao.produto_ativo)
+
+
+def montar_pipeline_fotos(configuracao: Configuracao, fotos: Path) -> PipelineFotos:
+    """Composition root do pipeline de fotos, usado por `processar`.
+
+    Sempre publica no Cloudflare R2 real — sem opção de armazenamento local (decisão
+    confirmada com o usuário na task 11: nada de flag `--sem-upload`).
+    """
+    configuracao.exigir_r2()
+    assert configuracao.r2_bucket is not None
+    assert configuracao.r2_account_id is not None
+    assert configuracao.r2_access_key_id is not None
+    assert configuracao.r2_secret_access_key is not None
+    assert configuracao.r2_url_publica is not None
+
+    catalogo = CatalogoFotosDiretorio(fotos)
+    processador = ProcessadorImagemPillow(
+        configuracao.imagem_lado_max_px, configuracao.imagem_tamanho_max_kb
+    )
+    armazenamento = ArmazenamentoImagensR2(
+        bucket=configuracao.r2_bucket,
+        account_id=configuracao.r2_account_id,
+        access_key_id=configuracao.r2_access_key_id,
+        secret_access_key=configuracao.r2_secret_access_key,
+        url_publica=configuracao.r2_url_publica,
+    )
+    return PipelineFotos(catalogo, processador, armazenamento)
+
+
+def montar_processador_lote(configuracao: Configuracao, fotos: Path, lote: str) -> ProcessarLote:
+    """Composition root do caso de uso principal, usado pelo subcomando `processar`."""
+    lote_dir = configuracao.lotes_dir / lote
+    return ProcessarLote(
+        leitor_planilha_entrada=montar_leitor_planilha_entrada(),
+        validador=montar_validador_entrada(fotos),
+        pipeline_fotos=montar_pipeline_fotos(configuracao, fotos),
+        gerador_textos=montar_gerador_textos(configuracao),
+        montador=montar_montador_planilha(configuracao),
+        escritor=EscritorPlanilhaSaidaOpenpyxl(),
+        repositorio_estado=RepositorioEstadoLoteJson(lote_dir),
+        gerador_relatorio=GeradorRelatorio(),
+        politica_reexecucao=PoliticaReexecucao(),
+    )

@@ -86,7 +86,9 @@ class TestRegistrarValidacao:
 
 class TestRegistrarFotos:
     @pytest.mark.parametrize(
-        "estado_inicial", [_validado, lambda: _erro_fotos()], ids=["validado", "erro-fotos"]
+        "estado_inicial",
+        [_validado, lambda: _erro_fotos(), _textos_gerados, lambda: _pronto()],
+        ids=["validado", "erro-fotos", "textos-gerados", "pronto"],
     )
     def test_transicoes_validas(self, estado_inicial: Callable[[], EstadoProduto]) -> None:
         estado = estado_inicial()
@@ -117,8 +119,16 @@ class TestRegistrarErroFotos:
 
         assert estado.status is StatusProduto.ERRO_FOTOS
 
-    def test_transicao_invalida_a_partir_de_fotos_publicadas(self) -> None:
-        estado = _fotos_publicadas()
+    def test_a_partir_de_pronto_apos_refazer_fotos(self) -> None:
+        """`--refazer-fotos` num produto `pronto` que falha de novo volta para `erro-fotos`."""
+        estado = _pronto()
+
+        estado.registrar_erro_fotos()
+
+        assert estado.status is StatusProduto.ERRO_FOTOS
+
+    def test_transicao_invalida_a_partir_de_reprovado_validacao(self) -> None:
+        estado = EstadoProduto.registrar_validacao("3254002", _entrada(), "hash-1", _REPROVADO)
 
         with pytest.raises(ErroTransicaoEstadoInvalida):
             estado.registrar_erro_fotos()
@@ -161,6 +171,21 @@ class TestEtapaTextos:
         estado.reprovar_qa()
 
         assert estado.status is StatusProduto.REPROVADO_QA
+
+    @pytest.mark.parametrize(
+        "estado_inicial",
+        [lambda: _reprovado_qa(), lambda: _pronto()],
+        ids=["reprovado-qa", "pronto"],
+    )
+    def test_registrar_textos_valido_ao_retomar_de_um_produto_mais_adiante(
+        self, estado_inicial: Callable[[], EstadoProduto]
+    ) -> None:
+        """`reprovado-qa` retoma textos sem flag; `pronto` retoma com `--refazer-textos`."""
+        estado = estado_inicial()
+
+        estado.registrar_textos({"titulo": "Conjunto Kiki"})
+
+        assert estado.status is StatusProduto.TEXTOS_GERADOS
 
     def test_registrar_tentativa_nao_muda_status_e_acumula_custo(self) -> None:
         estado = _fotos_publicadas()
@@ -229,4 +254,16 @@ def _erro_fotos() -> EstadoProduto:
 def _erro_llm() -> EstadoProduto:
     estado = _fotos_publicadas()
     estado.registrar_erro_llm()
+    return estado
+
+
+def _pronto() -> EstadoProduto:
+    estado = _textos_gerados()
+    estado.marcar_pronto()
+    return estado
+
+
+def _reprovado_qa() -> EstadoProduto:
+    estado = _fotos_publicadas()
+    estado.reprovar_qa()
     return estado

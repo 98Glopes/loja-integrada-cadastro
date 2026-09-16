@@ -3,7 +3,7 @@
 **Responsabilidade:** persistir o progresso de cada produto do lote (`EstadoProduto`) para que
 uma reexecução pule o que está pronto e retome do ponto de falha, sem repetir etapas caras
 (LLM, upload de fotos).
-**Estado:** implementado pelas tasks 06, 07 · última atualização 2026-09-14 (task 07)
+**Estado:** implementado pelas tasks 06, 07, 11 · última atualização 2026-09-16 (task 11)
 
 ## Arquivos
 
@@ -73,6 +73,9 @@ class RepositorioEstadoLote(Protocol):
     def carregar(self, sku_pai: str) -> EstadoProduto | None: ...
     def salvar(self, estado: EstadoProduto) -> None: ...
     def listar(self) -> list[EstadoProduto]: ...
+    def copiar_planilha_entrada(self, planilha: Path) -> None: ...   # task 11
+    def salvar_relatorio(self, relatorio: Relatorio) -> None: ...    # task 11
+    def diretorio_lote(self) -> Path: ...                            # task 11
 
 # services/politica_reexecucao.py
 class EtapaLote(Enum):
@@ -103,6 +106,8 @@ class RepositorioEstadoLoteJson:
     def carregar(self, sku_pai: str) -> EstadoProduto | None: ...
     def salvar(self, estado: EstadoProduto) -> None: ...
     def listar(self) -> list[EstadoProduto]: ...
+    def salvar_relatorio(self, relatorio: Relatorio) -> None: ...   # task 11: grava relatorio.md/.json
+    def diretorio_lote(self) -> Path: ...                           # task 11: devolve lote_dir
 ```
 
 ## Comportamento
@@ -115,14 +120,21 @@ dela, levantam `ErroTransicaoEstadoInvalida`. Grafo de transições:
 | Método | Origem válida | Destino |
 |---|---|---|
 | `registrar_validacao` (fábrica) | — | `validado` / `reprovado-validacao` |
-| `registrar_fotos` | `validado`, `erro-fotos` | `fotos-publicadas` |
-| `registrar_erro_fotos` | `validado`, `erro-fotos` | `erro-fotos` |
-| `registrar_tentativa` (não muda status) | `fotos-publicadas`, `erro-llm` | mesmo status |
-| `registrar_textos` | `fotos-publicadas`, `erro-llm` | `textos-gerados` |
-| `registrar_erro_llm` | `fotos-publicadas`, `erro-llm` | `erro-llm` |
-| `reprovar_qa` | `fotos-publicadas`, `erro-llm` | `reprovado-qa` |
+| `registrar_fotos` | `validado`, `erro-fotos`, `fotos-publicadas`, `textos-gerados`, `reprovado-qa`, `erro-llm`, `pronto` | `fotos-publicadas` |
+| `registrar_erro_fotos` | (mesmas origens de `registrar_fotos`) | `erro-fotos` |
+| `registrar_tentativa` (não muda status) | `fotos-publicadas`, `erro-llm`, `textos-gerados`, `reprovado-qa`, `pronto` | mesmo status |
+| `registrar_textos` | `fotos-publicadas`, `erro-llm`, `textos-gerados`, `reprovado-qa`, `pronto` | `textos-gerados` |
+| `registrar_erro_llm` | (mesmas origens de `registrar_textos`) | `erro-llm` |
+| `reprovar_qa` | (mesmas origens de `registrar_textos`) | `reprovado-qa` |
 | `marcar_pronto` | `textos-gerados` | `pronto` |
 | `registrar_verificacao` (não muda status) | `pronto` | `pronto` |
+
+Origens de `registrar_fotos`/`registrar_textos` (e dos métodos que compartilham o mesmo
+conjunto) foram ampliadas na task 11 além da progressão linear: qualquer status que já passou
+pela etapa correspondente também é uma origem válida, para `--refazer-fotos`/`--refazer-textos`
+poderem retomar a partir de um produto `pronto` (ou `reprovado-qa`/`erro-llm`/`textos-gerados`),
+e para o retomar natural (sem flag) de `reprovado-qa` poder gerar textos de novo. Ver "Desvios e
+decisões" em `docs/specs/tasks/11-processar-lote-relatorio.md`.
 
 `registrar_tentativa` também acumula `custo_usd_estimado` (parâmetro `custo_usd`, somado ao
 valor atual). Toda mutação atualiza `atualizado_em` para `datetime.now(UTC)`.
@@ -130,7 +142,11 @@ valor atual). Toda mutação atualiza `atualizado_em` para `datetime.now(UTC)`.
 **`RepositorioEstadoLoteJson`** — o construtor recebe a raiz do lote (`lotes/<lote>/`) e cria,
 de forma idempotente, `entrada/`, `estado/`, `fotos-processadas/` e `saida/`.
 `copiar_planilha_entrada` é um método separado (não roda no construtor, já que `carregar`/
-`listar`/`salvar` não precisam de uma planilha). `salvar` grava
+`listar`/`salvar` não precisam de uma planilha); promovido ao port na task 11 (antes só existia
+na implementação concreta). `diretorio_lote()` devolve a raiz do lote — usado por `ProcessarLote`
+(task 11) para montar `saida/<lote>.xlsx` sem precisar conhecer `LOTES_DIR`. `salvar_relatorio`
+(task 11) grava `relatorio.md` (texto) e `relatorio.json` (`json.dumps` de `Relatorio.dados`) na
+raiz do lote. `salvar` grava
 `estado/<sku_pai>.json` por escrita atômica: `tempfile.mkstemp` no próprio diretório de destino
 + `Path.replace`; o arquivo temporário é sempre removido no `finally` (fica no disco só se a
 escrita ou a troca falharem antes de completar). `carregar` devolve `None` para SKU sem arquivo;
@@ -158,8 +174,6 @@ a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem 
 
 - Não orquestra o lote (chamar as etapas na ordem, decidir quando parar) — isso é `ProcessarLote`,
   task 11. Este módulo só decide/persiste, não executa nada.
-- Nenhum wiring em `config/composicao.py` ou `cli.py` ainda — nenhum subcomando usa este módulo
-  até a task 11 (`processar`).
 - `textos`/`tentativas`/`verificacao` ainda ficam com tipo mínimo (`Mapping[str, object]`/
   `Mapping[str, str]`); `fotos` já foi tipado (`FotoProduto`, task 07). As tasks 09/16
   (`TextosProduto`, tentativa estruturada) e 17 (verificação estruturada) substituem os
@@ -186,9 +200,9 @@ a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem 
   escrita atômica não deixa `.tmp` para trás, `ErroEstadoLote` para JSON corrompido e para JSON
   com campo faltando, `salvar` sobrescrevendo um estado existente, status persistido como o
   enum correto.
-- Nenhum fake de `RepositorioEstadoLote` extraído ainda — sem um segundo consumidor até aqui
-  (a task 11 provavelmente precisará de um `RepositorioEstadoLoteFake` em memória para testar a
-  orquestração sem tocar disco).
+- `tests/unit/services/test_processador_lote.py` (task 11) — `_RepositorioEstadoLoteFake` em
+  memória, inline (mesma convenção de fakes locais de `test_pipeline_fotos.py`), ainda não
+  extraído para um módulo compartilhado.
 
 ## Histórico
 
@@ -202,3 +216,10 @@ a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem 
   serialização em `infra/repositorio_estado_lote_json.py` ganhou
   `_foto_para_dict`/`_foto_de_dict`. `registrar_erro_fotos()` confirmado sem parâmetro de
   motivo (ver `docs/specs/tasks/07-pipeline-fotos.md`).
+- Task 11 (2026-09-16): `RepositorioEstadoLote` ganha `copiar_planilha_entrada`,
+  `salvar_relatorio`, `diretorio_lote` (wiring real em `config/composicao.py`/`cli.py`, primeiro
+  consumidor do módulo). Origens de `registrar_fotos`/`registrar_erro_fotos`/`registrar_textos`/
+  `registrar_erro_llm`/`reprovar_qa` ampliadas para cobrir `--refazer-fotos`/`--refazer-textos`
+  a partir de um produto já `pronto` e o retomar natural de `reprovado-qa` — lacuna do grafo da
+  task 06 exposta ao implementar a orquestração real (ver "Desvios e decisões" em
+  `docs/specs/tasks/11-processar-lote-relatorio.md`).

@@ -13,9 +13,32 @@ from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
 from loja_integrada_cadastro.models.resultado_validacao import ResultadoValidacao
 from loja_integrada_cadastro.models.status_produto import StatusProduto
 
-# Statuses de origem em que cada método de intenção pode ser chamado.
-_ORIGENS_ETAPA_FOTOS = frozenset({StatusProduto.VALIDADO, StatusProduto.ERRO_FOTOS})
-_ORIGENS_ETAPA_TEXTOS = frozenset({StatusProduto.FOTOS_PUBLICADAS, StatusProduto.ERRO_LLM})
+# Statuses de origem em que cada método de intenção pode ser chamado. Além da progressão normal
+# (etapa anterior concluída ou com erro), inclui todo status que já passou pela etapa — para
+# `--refazer-fotos`/`--refazer-textos` (task 11) poderem retomar de uma etapa anterior mesmo a
+# partir de um produto já `pronto` (`docs/ARQUITETURA.md` §8, `PoliticaReexecucao._JA_TEM_FOTOS`/
+# `_JA_TEM_TEXTOS`) — e para o retomar natural de `reprovado-qa` (sem flag) poder gerar textos de
+# novo.
+_ORIGENS_ETAPA_FOTOS = frozenset(
+    {
+        StatusProduto.VALIDADO,
+        StatusProduto.ERRO_FOTOS,
+        StatusProduto.FOTOS_PUBLICADAS,
+        StatusProduto.TEXTOS_GERADOS,
+        StatusProduto.REPROVADO_QA,
+        StatusProduto.ERRO_LLM,
+        StatusProduto.PRONTO,
+    }
+)
+_ORIGENS_ETAPA_TEXTOS = frozenset(
+    {
+        StatusProduto.FOTOS_PUBLICADAS,
+        StatusProduto.ERRO_LLM,
+        StatusProduto.TEXTOS_GERADOS,
+        StatusProduto.REPROVADO_QA,
+        StatusProduto.PRONTO,
+    }
+)
 
 
 @dataclass

@@ -83,11 +83,11 @@ exatamente a chave publicada no R2 — sem transformação adicional.
   implementação R2, para não propagar uma mudança de assinatura por `PipelineFotos`,
   `ArmazenamentoImagensDiretorio` e testes sem um segundo valor de `content_type` real. Ver
   `docs/specs/tasks/08-publicacao-r2.md`.
-- **Sem wiring em `config/composicao.py`/`cli.py`:** o comando `processar` continua stub
-  (`_nao_implementado`) até a task 11, responsável registrada pelo wiring real de CLI (spec da
-  task 07). Não há flag `--sem-upload` nem modo "local" acionável por linha de comando — a
-  pipeline, quando usada, sempre publica no R2. `ArmazenamentoImagensR2` é instanciado
-  diretamente onde necessário hoje (testes de integração).
+- **Wiring real desde a task 11:** `config/composicao.py::montar_pipeline_fotos` monta
+  `ArmazenamentoImagensR2` sempre (exige `Configuracao.exigir_r2()`). Não há flag `--sem-upload`
+  nem modo "local" acionável por linha de comando (confirmado com o usuário, ADR-008) — a
+  pipeline, quando usada, sempre publica no R2. `ArmazenamentoImagensDiretorio` continua
+  instanciado diretamente só em testes de integração.
 - **TTL de 7 dias é uma regra de lifecycle do bucket, fora do código:** decisão do usuário —
   objetos em `produtos/` expiram automaticamente pela configuração do bucket (painel
   Cloudflare/IaC), não por um parâmetro do `put_object` (S3/R2 não deleta por um header

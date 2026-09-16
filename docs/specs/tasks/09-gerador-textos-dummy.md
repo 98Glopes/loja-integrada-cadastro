@@ -33,16 +33,23 @@ class TextosProduto:
     seo_tag_title: str
     seo_tag_description: str
 
-    def como_mapa(self) -> Mapping[str, str]: ...  # {"titulo", "descricao_html", "seo_tag_title", "seo_tag_description"}
+    def como_mapa(
+        self,
+    ) -> Mapping[
+        str, str
+    ]: ...  # {"titulo", "descricao_html", "seo_tag_title", "seo_tag_description"}
+
 
 # services/ports/gerador_textos.py
 class GeradorTextos(Protocol):
     def gerar(self, produto: ProdutoEntrada, estado: EstadoProduto) -> TextosProduto: ...
 
+
 # infra/gerador_textos_dummy.py
 class GeradorTextosDummy:
     def __init__(self, dados_mestre: DadosMestre) -> None: ...
     def gerar(self, produto: ProdutoEntrada, estado: EstadoProduto) -> TextosProduto: ...
+
 
 # config/composicao.py
 def montar_gerador_textos(configuracao: Configuracao) -> GeradorTextos: ...

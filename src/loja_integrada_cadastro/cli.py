@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sys
 from argparse import ArgumentParser, Namespace
 from collections.abc import Callable, Sequence
@@ -9,11 +10,17 @@ from typing import TYPE_CHECKING
 from loja_integrada_cadastro.config.composicao import (
     montar_gerador_modelo_entrada,
     montar_leitor_planilha_entrada,
+    montar_processador_lote,
     montar_validador_entrada,
 )
+from loja_integrada_cadastro.config.configuracao import Configuracao
+from loja_integrada_cadastro.models.exceptions.erro_configuracao import ErroConfiguracao
 from loja_integrada_cadastro.models.exceptions.erro_planilha_entrada import ErroPlanilhaEntrada
+from loja_integrada_cadastro.models.exceptions.erro_planilha_saida import ErroPlanilhaSaida
 from loja_integrada_cadastro.models.exceptions.erro_recursos import ErroRecursos
 from loja_integrada_cadastro.models.resultado_validacao import ResultadoValidacao
+from loja_integrada_cadastro.models.resumo_lote import ResumoLote
+from loja_integrada_cadastro.services.processador_lote import OpcoesProcessamento
 
 if TYPE_CHECKING:
     from argparse import _SubParsersAction
@@ -84,6 +91,7 @@ class AplicacaoCli:
         parser.add_argument(
             "--refazer-fotos", nargs="+", metavar="SKU", default=[], help="reprocessa as fotos"
         )
+        parser.add_argument("--verboso", action="store_true", help="log em nível debug")
 
     @staticmethod
     def _definir_verificar(subcomandos: Subcomandos) -> None:
@@ -146,7 +154,43 @@ class AplicacaoCli:
             )
 
     def _processar(self, opcoes: Namespace) -> int:
-        return self._nao_implementado("processar")
+        logging.basicConfig(
+            level=logging.DEBUG if opcoes.verboso else logging.INFO, format="%(message)s"
+        )
+        try:
+            configuracao = Configuracao.do_ambiente()
+            processador = montar_processador_lote(configuracao, opcoes.fotos, opcoes.lote)
+        except ErroConfiguracao as erro:
+            print(f"processar: {erro}", file=sys.stderr)
+            return CODIGO_ERRO_NEGOCIO
+
+        opcoes_processamento = OpcoesProcessamento(
+            incluir_reprovados=opcoes.incluir_reprovados,
+            refazer_textos=frozenset(opcoes.refazer_textos),
+            refazer_fotos=frozenset(opcoes.refazer_fotos),
+        )
+        try:
+            resumo = processador.executar(
+                opcoes.planilha, opcoes.fotos, opcoes.lote, opcoes_processamento
+            )
+        except (ErroPlanilhaEntrada, ErroRecursos, ErroPlanilhaSaida) as erro:
+            print(f"processar: {erro}", file=sys.stderr)
+            return CODIGO_ERRO_NEGOCIO
+
+        self._imprimir_resumo_lote(resumo)
+        return 0 if resumo.todos_prontos else CODIGO_ERRO_NEGOCIO
+
+    @staticmethod
+    def _imprimir_resumo_lote(resumo: ResumoLote) -> None:
+        for status, quantidade in resumo.contagem_por_status.items():
+            if quantidade:
+                print(f"  {status.value}: {quantidade}")
+        print(f"processar: planilha em {resumo.caminho_planilha}")
+        print(f"processar: relatório em {resumo.caminho_relatorio_md}")
+        print(
+            f"processar: custo estimado US$ {resumo.custo_usd_total} "
+            f"({resumo.duracao_segundos:.1f}s)"
+        )
 
     def _verificar(self, opcoes: Namespace) -> int:
         return self._nao_implementado("verificar")
