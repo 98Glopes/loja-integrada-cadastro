@@ -10,14 +10,11 @@ from loja_integrada_cadastro.services.validador_entrada import ValidadorEntrada
 class CatalogoFotosFake:
     """Fake do port `CatalogoFotos`: dict em memória, sem tocar o disco."""
 
-    def __init__(self, dados: dict[str, dict[str, list[Path]]] | None = None) -> None:
+    def __init__(self, dados: dict[str, list[Path]] | None = None) -> None:
         self._dados = dados or {}
 
-    def listar(self, sku_pai: str) -> dict[str, list[Path]]:
-        return self._dados.get(sku_pai, {})
-
-    def cores_disponiveis(self, sku_pai: str) -> list[str]:
-        return list(self._dados.get(sku_pai, {}).keys())
+    def listar(self, sku_pai: str) -> list[Path]:
+        return self._dados.get(sku_pai, [])
 
 
 def _gtin(corpo: str) -> str:
@@ -33,7 +30,7 @@ GTIN_1 = _gtin("789123456780")
 GTIN_2 = _gtin("789123456781")
 GTIN_INVALIDO = GTIN_1[:-1] + str((int(GTIN_1[-1]) + 1) % 10)
 
-FOTO_PADRAO = {"Beige": [Path("beige-1.jpg")]}
+FOTO_PADRAO = [Path("beige-1.jpg")]
 
 
 def _dados_mestre() -> DadosMestre:
@@ -131,7 +128,7 @@ def test_marca_desconhecida_gera_problema() -> None:
 
 
 def test_cor_invalida_gera_problema() -> None:
-    catalogo = CatalogoFotosFake({"3254002": {"Amarelo": [Path("a.jpg")]}})
+    catalogo = CatalogoFotosFake({"3254002": [Path("a.jpg")]})
     _, resultado = _validador(catalogo).validar([_produto(variacoes=(_variacao(cor="Amarelo"),))])
 
     assert resultado.aprovado is False
@@ -222,7 +219,7 @@ def test_combinacao_cor_tamanho_duplicada_gera_problema() -> None:
 
 
 def test_mais_de_50_variacoes_gera_problema() -> None:
-    catalogo = CatalogoFotosFake({"3254002": {"Beige": [Path("a.jpg")], "Rosa": [Path("b.jpg")]}})
+    catalogo = CatalogoFotosFake({"3254002": [Path("a.jpg")]})
     variacoes = tuple(
         _variacao(
             cor="Beige" if i % 2 == 0 else "Rosa", tamanho="P", gtin=_gtin(f"78912345{i:04d}")
@@ -287,7 +284,7 @@ def test_campo_obrigatorio_vazio_gera_problema() -> None:
 # --- fotos ---------------------------------------------------------------------------------
 
 
-def test_cor_sem_pasta_de_fotos_gera_problema() -> None:
+def test_sku_sem_nenhuma_foto_gera_problema() -> None:
     catalogo = CatalogoFotosFake({})
 
     _, resultado = _validador(catalogo).validar([_produto()])
@@ -297,7 +294,7 @@ def test_cor_sem_pasta_de_fotos_gera_problema() -> None:
 
 
 def test_pasta_de_fotos_sem_arquivo_gera_problema() -> None:
-    catalogo = CatalogoFotosFake({"3254002": {"Beige": []}})
+    catalogo = CatalogoFotosFake({"3254002": []})
 
     _, resultado = _validador(catalogo).validar([_produto()])
 
@@ -305,31 +302,13 @@ def test_pasta_de_fotos_sem_arquivo_gera_problema() -> None:
     assert resultado.problemas[0].campo == "fotos"
 
 
-def test_subpasta_sem_cor_correspondente_gera_aviso() -> None:
-    catalogo = CatalogoFotosFake({"3254002": {"Beige": [Path("a.jpg")], "Preto": [Path("b.jpg")]}})
-
-    _, resultado = _validador(catalogo).validar([_produto()])
-
-    assert resultado.aprovado is True
-    assert any(aviso.campo == "fotos" and "Preto" in aviso.mensagem for aviso in resultado.avisos)
-
-
 def test_mais_de_5_fotos_gera_aviso() -> None:
-    catalogo = CatalogoFotosFake({"3254002": {"Beige": [Path(f"{i}.jpg") for i in range(6)]}})
+    catalogo = CatalogoFotosFake({"3254002": [Path(f"{i}.jpg") for i in range(6)]})
 
     _, resultado = _validador(catalogo).validar([_produto()])
 
     assert resultado.aprovado is True
     assert any("6 fotos" in aviso.mensagem for aviso in resultado.avisos)
-
-
-def test_casamento_de_fotos_ignora_caixa_e_acento() -> None:
-    catalogo = CatalogoFotosFake({"3254002": {"beige": [Path("a.jpg")]}})
-
-    _, resultado = _validador(catalogo).validar([_produto(variacoes=(_variacao(cor="Beige"),))])
-
-    assert resultado.aprovado is True
-    assert not any(aviso.campo == "fotos" for aviso in resultado.avisos)
 
 
 # --- lote feliz ------------------------------------------------------------------------------
@@ -338,8 +317,8 @@ def test_casamento_de_fotos_ignora_caixa_e_acento() -> None:
 def test_lote_feliz_aprova_sem_problemas() -> None:
     catalogo = CatalogoFotosFake(
         {
-            "3254002": {"Beige": [Path("a.jpg")], "Rosa": [Path("b.jpg")]},
-            "3254010": {"Preto": [Path("c.jpg")]},
+            "3254002": [Path("a.jpg"), Path("b.jpg")],
+            "3254010": [Path("c.jpg")],
         }
     )
     produtos = [

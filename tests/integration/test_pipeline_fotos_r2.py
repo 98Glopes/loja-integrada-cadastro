@@ -36,7 +36,7 @@ def _configuracao() -> Configuracao:
 
 
 def _copiar_estrutura_com_fotos_reais(destino: Path) -> Path:
-    """Espelha `<sku-pai>/<cor>/` da fixture do lote piloto, mas com fotos reais da POC.
+    """Espelha `<sku-pai>/` da fixture do lote piloto, mas com fotos reais da POC.
 
     Os arquivos da fixture (`tests/fixtures/lote-piloto/fotos/`) são propositalmente JPEGs
     "stub" de 22 bytes (task 05, `scripts/gerar_fixture_lote_piloto.py`) — servem só para o
@@ -52,13 +52,10 @@ def _copiar_estrutura_com_fotos_reais(destino: Path) -> Path:
     for sku_dir in sorted(FOTOS_LOTE_PILOTO.iterdir()):
         if not sku_dir.is_dir():
             continue
-        for cor_dir in sorted(sku_dir.iterdir()):
-            if not cor_dir.is_dir():
-                continue
-            pasta = raiz_fotos / sku_dir.name / cor_dir.name
-            pasta.mkdir(parents=True, exist_ok=True)
-            for arquivo_stub in sorted(cor_dir.iterdir()):
-                shutil.copyfile(next(fotos_ciclicas), pasta / arquivo_stub.name)
+        pasta = raiz_fotos / sku_dir.name
+        pasta.mkdir(parents=True, exist_ok=True)
+        for arquivo_stub in sorted(sku_dir.iterdir()):
+            shutil.copyfile(next(fotos_ciclicas), pasta / arquivo_stub.name)
     return raiz_fotos
 
 
@@ -120,8 +117,7 @@ def test_pipeline_sobre_o_lote_piloto_deixa_urls_https_acessiveis(tmp_path: Path
 
     todas_as_fotos = []
     for sku_pai in skus_pai:
-        cores = catalogo.cores_disponiveis(sku_pai)
-        produto = _produto(sku_pai, cores)
+        produto = _produto(sku_pai, ["Unica"])
         estado = EstadoProduto.registrar_validacao(
             sku_pai, produto, "hash-1", ResultadoValidacao(problemas=(), avisos=())
         )

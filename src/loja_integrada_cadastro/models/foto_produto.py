@@ -6,10 +6,12 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class FotoProduto:
-    """Uma foto processada de um produto, pronta para publicação (`docs/ARQUITETURA.md` §5)."""
+    """Uma foto processada de um produto, pronta para publicação (`docs/ARQUITETURA.md` §5).
+
+    Não tem cor: vale para o produto inteiro (a Loja Integrada só aceita imagem no pai).
+    """
 
     sku_pai: str
-    cor: str
     ordem: int
     arquivo_origem: Path
     nome: str

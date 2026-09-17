@@ -248,38 +248,22 @@ class ValidadorEntrada:
         problemas: list[ProblemaValidacao],
         avisos: list[ProblemaValidacao],
     ) -> None:
-        catalogo = self._catalogo_fotos.listar(produto.sku_pai)
-        arquivos_por_cor = {_normalizar(pasta): arquivos for pasta, arquivos in catalogo.items()}
-        cores_normalizadas = {_normalizar(cor) for cor in produto.cores}
-
-        total_fotos = 0
-        for cor in produto.cores:
-            arquivos = arquivos_por_cor.get(_normalizar(cor))
-            if not arquivos:
-                problemas.append(
-                    ProblemaValidacao(
-                        produto.sku_pai, "fotos", f"nenhuma foto encontrada para a cor '{cor}'"
-                    )
+        """Fotos não têm cor (valem para o produto inteiro): só confere se existe alguma."""
+        arquivos = self._catalogo_fotos.listar(produto.sku_pai)
+        if not arquivos:
+            problemas.append(
+                ProblemaValidacao(
+                    produto.sku_pai, "fotos", "nenhuma foto encontrada para o produto"
                 )
-            else:
-                total_fotos += len(arquivos)
+            )
+            return
 
-        for pasta in catalogo:
-            if _normalizar(pasta) not in cores_normalizadas:
-                avisos.append(
-                    ProblemaValidacao(
-                        produto.sku_pai,
-                        "fotos",
-                        f"subpasta '{pasta}' não corresponde a nenhuma cor do produto na planilha",
-                    )
-                )
-
-        if total_fotos > MAX_FOTOS_POR_PRODUTO:
+        if len(arquivos) > MAX_FOTOS_POR_PRODUTO:
             avisos.append(
                 ProblemaValidacao(
                     produto.sku_pai,
                     "fotos",
-                    f"{total_fotos} fotos encontradas; só as {MAX_FOTOS_POR_PRODUTO} "
+                    f"{len(arquivos)} fotos encontradas; só as {MAX_FOTOS_POR_PRODUTO} "
                     "primeiras serão usadas",
                 )
             )
@@ -294,12 +278,6 @@ def _digito_verificador_valido(gtin: str) -> bool:
     )
     digito_calculado = (10 - soma % 10) % 10
     return digito_calculado == digito_informado
-
-
-def _normalizar(texto: str) -> str:
-    """Remove acentuação (NFKD) e caixa, para casar subpasta de foto com cor da planilha."""
-    sem_acento = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode("ascii")
-    return sem_acento.casefold()
 
 
 def _tem_caractere_controle(texto: str) -> bool:

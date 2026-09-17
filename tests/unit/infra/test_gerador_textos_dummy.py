@@ -40,9 +40,8 @@ def _estado_fotos_publicadas(produto: ProdutoEntrada) -> EstadoProduto:
     )
     foto = FotoProduto(
         sku_pai=produto.sku_pai,
-        cor=produto.cores[0],
         ordem=1,
-        arquivo_origem=Path(f"fotos/{produto.sku_pai}/{produto.cores[0]}/1.jpg"),
+        arquivo_origem=Path(f"fotos/{produto.sku_pai}/1.jpg"),
         nome="1.jpg",
         chave=f"produtos/{produto.sku_pai}/1.jpg",
         url="url-1",

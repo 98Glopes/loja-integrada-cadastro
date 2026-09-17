@@ -1,10 +1,11 @@
 """Gera a fixture `tests/fixtures/lote-piloto/` usada pelos testes da task 05.
 
 Cria `planilha.xlsx` (6 produtos, com marcas/cores/tamanhos reais de `recursos/dados_mestre.yaml`)
-e `fotos/<sku-pai>/<cor>/*.jpg` com arquivos mínimos (cabeçalho JPEG válido — SOI/APP0/EOI —, mas
-sem dados de imagem reais; suficiente para o catálogo de fotos, que só confere extensão e
-existência, não decodifica o conteúdo). Dois produtos têm um defeito proposital (cor inválida e
-GTIN inválido) para exercitar o comando `validar` ponta a ponta.
+e `fotos/<sku-pai>/*.jpg` com arquivos mínimos (cabeçalho JPEG válido — SOI/APP0/EOI —, mas sem
+dados de imagem reais; suficiente para o catálogo de fotos, que só confere extensão e existência,
+não decodifica o conteúdo). Fotos não têm cor — valem para o produto inteiro (ver ARQUITETURA.md
+§5). Dois produtos têm um defeito proposital (cor inválida e GTIN inválido) para exercitar o
+comando `validar` ponta a ponta.
 
 Reexecução: apaga e regera a pasta inteira, para o resultado ser determinístico.
 
@@ -53,9 +54,8 @@ class _Produto:
     detalhes: str
     faixa_tamanho: str
     variacoes: tuple[_Variacao, ...]
-    pastas_de_fotos: tuple[str, ...]
-    """Cores para as quais gerar pasta de fotos — normalmente as mesmas das variações; um
-    produto pode ter uma pasta com o nome literal de uma cor inválida, para isolar o defeito."""
+    numero_de_fotos: int
+    """Quantos arquivos de foto gerar em `fotos/<sku-pai>/` (sem cor — vale pro produto todo)."""
 
 
 def _gtin(corpo: str) -> str:
@@ -86,7 +86,7 @@ PRODUTOS = (
             _Variacao("Beige", "M", _gtin("789100000020")),
             _Variacao("Beige", "G", _gtin("789100000030")),
         ),
-        pastas_de_fotos=("Beige",),
+        numero_de_fotos=1,
     ),
     _Produto(
         sku_pai="3254010",
@@ -103,7 +103,7 @@ PRODUTOS = (
             _Variacao("Rosa", "1", _gtin("789100000060")),
             _Variacao("Rosa", "2", _gtin("789100000070")),
         ),
-        pastas_de_fotos=("Beige", "Rosa"),
+        numero_de_fotos=2,
     ),
     _Produto(
         sku_pai="3254020",
@@ -118,7 +118,7 @@ PRODUTOS = (
             _Variacao("Preto", "M", _gtin("789100000080")),
             _Variacao("Branco", "M", _gtin("789100000090")),
         ),
-        pastas_de_fotos=("Preto", "Branco"),
+        numero_de_fotos=2,
     ),
     _Produto(
         sku_pai="3254030",
@@ -131,7 +131,7 @@ PRODUTOS = (
         faixa_tamanho="P",
         # Defeito proposital: cor fora da lista mestre — único problema deste produto.
         variacoes=(_Variacao("Arco-Iris", "P", _gtin("789100000100")),),
-        pastas_de_fotos=("Arco-Iris",),
+        numero_de_fotos=1,
     ),
     _Produto(
         sku_pai="3254040",
@@ -144,7 +144,7 @@ PRODUTOS = (
         faixa_tamanho="P",
         # Defeito proposital: dígito verificador de GTIN inválido — único problema deste produto.
         variacoes=(_Variacao("Preto", "P", GTIN_INVALIDO),),
-        pastas_de_fotos=("Preto",),
+        numero_de_fotos=1,
     ),
     _Produto(
         sku_pai="3254050",
@@ -156,7 +156,7 @@ PRODUTOS = (
         detalhes="Estampa localizada, abertura de fralda",
         faixa_tamanho="G",
         variacoes=(_Variacao("Branco", "G", _gtin("789100000110")),),
-        pastas_de_fotos=("Branco",),
+        numero_de_fotos=1,
     ),
 )
 
@@ -191,10 +191,10 @@ def _gerar_planilha(destino: Path) -> None:
 
 def _gerar_fotos(raiz_fotos: Path) -> None:
     for produto in PRODUTOS:
-        for cor in produto.pastas_de_fotos:
-            pasta = raiz_fotos / produto.sku_pai / cor
-            pasta.mkdir(parents=True, exist_ok=True)
-            (pasta / f"{produto.sku_pai}-{cor.lower()}-1.jpg").write_bytes(JPEG_MINIMO)
+        pasta = raiz_fotos / produto.sku_pai
+        pasta.mkdir(parents=True, exist_ok=True)
+        for ordem in range(1, produto.numero_de_fotos + 1):
+            (pasta / f"{produto.sku_pai}-{ordem}.jpg").write_bytes(JPEG_MINIMO)
 
 
 def main() -> None:

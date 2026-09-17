@@ -44,9 +44,8 @@ def _estado_completo() -> EstadoProduto:
         fotos=(
             FotoProduto(
                 sku_pai="3254002",
-                cor="Beige",
                 ordem=1,
-                arquivo_origem=Path("fotos/3254002/Beige/20250920_113424.jpg"),
+                arquivo_origem=Path("fotos/3254002/20250920_113424.jpg"),
                 nome="foto-1.jpg",
                 chave="produtos/3254002/foto-1.jpg",
                 url="https://cdn.example.com/foto-1.jpg",

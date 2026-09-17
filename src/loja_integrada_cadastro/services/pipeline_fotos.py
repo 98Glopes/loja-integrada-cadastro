@@ -10,7 +10,6 @@ from loja_integrada_cadastro.models.exceptions.erro_publicacao_imagem import (
 from loja_integrada_cadastro.models.foto_produto import FotoProduto
 from loja_integrada_cadastro.models.nomeador_fotos import NomeadorFotos, SeletorImagensPai
 from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
-from loja_integrada_cadastro.models.slug import slugificar
 from loja_integrada_cadastro.services.ports.armazenamento_imagens import ArmazenamentoImagens
 from loja_integrada_cadastro.services.ports.catalogo_fotos import CatalogoFotos
 from loja_integrada_cadastro.services.ports.processador_imagem import ProcessadorImagem
@@ -37,34 +36,30 @@ class PipelineFotos:
 
     def processar(self, produto: ProdutoEntrada, estado: EstadoProduto) -> list[FotoProduto]:
         """Processa todas as fotos do produto e registra o resultado em `estado`."""
-        catalogo = self._catalogo.listar(produto.sku_pai)
-        arquivos_por_cor = {slugificar(cor): arquivos for cor, arquivos in catalogo.items()}
+        arquivos = self._catalogo.listar(produto.sku_pai)
 
         fotos: list[FotoProduto] = []
         try:
-            for cor in produto.cores:
-                arquivos = arquivos_por_cor.get(slugificar(cor), [])
-                for ordem, arquivo in enumerate(arquivos, start=1):
-                    nome = NomeadorFotos.nomear(produto, cor, ordem)
-                    chave = f"produtos/{produto.sku_pai}/{nome}"
-                    dados = self._processador.preparar(arquivo)
-                    url = self._armazenamento.publicar(chave, dados)
-                    if not self._armazenamento.existe(url):
-                        raise ErroPublicacaoImagem(
-                            chave, "não respondeu 200 (image/jpeg) após publicação"
-                        )
-                    fotos.append(
-                        FotoProduto(
-                            sku_pai=produto.sku_pai,
-                            cor=cor,
-                            ordem=ordem,
-                            arquivo_origem=arquivo,
-                            nome=nome,
-                            chave=chave,
-                            url=url,
-                            bytes=len(dados),
-                        )
+            for ordem, arquivo in enumerate(arquivos, start=1):
+                nome = NomeadorFotos.nomear(produto, ordem)
+                chave = f"produtos/{produto.sku_pai}/{nome}"
+                dados = self._processador.preparar(arquivo)
+                url = self._armazenamento.publicar(chave, dados)
+                if not self._armazenamento.existe(url):
+                    raise ErroPublicacaoImagem(
+                        chave, "não respondeu 200 (image/jpeg) após publicação"
                     )
+                fotos.append(
+                    FotoProduto(
+                        sku_pai=produto.sku_pai,
+                        ordem=ordem,
+                        arquivo_origem=arquivo,
+                        nome=nome,
+                        chave=chave,
+                        url=url,
+                        bytes=len(dados),
+                    )
+                )
         except (ErroProcessamentoImagem, ErroPublicacaoImagem):
             estado.registrar_erro_fotos()
             raise

@@ -22,16 +22,13 @@ _APROVADO = ResultadoValidacao(problemas=(), avisos=())
 
 
 class _CatalogoFotosFake:
-    """Fake do port `CatalogoFotos`: dict em memória, sem tocar o disco."""
+    """Fake do port `CatalogoFotos`: lista em memória, sem tocar o disco."""
 
-    def __init__(self, arquivos: dict[str, list[Path]]) -> None:
+    def __init__(self, arquivos: list[Path]) -> None:
         self._arquivos = arquivos
 
-    def listar(self, sku_pai: str) -> dict[str, list[Path]]:
+    def listar(self, sku_pai: str) -> list[Path]:
         return self._arquivos
-
-    def cores_disponiveis(self, sku_pai: str) -> list[str]:
-        return list(self._arquivos.keys())
 
 
 class _ProcessadorImagemFake:
@@ -75,7 +72,7 @@ class _ArmazenamentoImagensEmMemoria:
         return chave in self.publicados
 
 
-def _produto(cores: tuple[str, ...]) -> ProdutoEntrada:
+def _produto(cores: tuple[str, ...] = ("Beige",)) -> ProdutoEntrada:
     return ProdutoEntrada(
         sku_pai="3254002",
         marca="Kiki",
@@ -101,11 +98,8 @@ def _estado(produto: ProdutoEntrada) -> EstadoProduto:
 
 class TestProcessar:
     def test_caminho_feliz_nomeia_publica_e_registra_estado(self) -> None:
-        produto = _produto(("Beige", "Rosa"))
-        arquivos = {
-            "Beige": [Path("fotos/3254002/Beige/a.jpg"), Path("fotos/3254002/Beige/b.jpg")],
-            "Rosa": [Path("fotos/3254002/Rosa/a.jpg")],
-        }
+        produto = _produto()
+        arquivos = [Path("fotos/3254002/a.jpg"), Path("fotos/3254002/b.jpg")]
         armazenamento = _ArmazenamentoImagensEmMemoria()
         pipeline = PipelineFotos(
             _CatalogoFotosFake(arquivos), _ProcessadorImagemFake(), armazenamento
@@ -115,38 +109,30 @@ class TestProcessar:
         fotos = pipeline.processar(produto, estado)
 
         assert [foto.nome for foto in fotos] == [
-            "kiki-conjunto-baby-malha-e-moletom-beige-1.jpg",
-            "kiki-conjunto-baby-malha-e-moletom-beige-2.jpg",
-            "kiki-conjunto-baby-malha-e-moletom-rosa-1.jpg",
+            "kiki-conjunto-baby-malha-e-moletom-1.jpg",
+            "kiki-conjunto-baby-malha-e-moletom-2.jpg",
         ]
-        assert len(armazenamento.publicados) == 3
+        assert len(armazenamento.publicados) == 2
         assert estado.status is StatusProduto.FOTOS_PUBLICADAS
         assert estado.fotos == tuple(fotos)
-        # Round-robin: beige-1, rosa-1, beige-2 (só 3 fotos ao todo, nenhuma cai fora dos 5)
-        assert len(estado.imagens_pai) == 3
+        assert len(estado.imagens_pai) == 2
 
-    def test_cor_sem_fotos_nao_quebra(self) -> None:
-        produto = _produto(("Beige", "Rosa"))
-        arquivos = {"Beige": [Path("fotos/3254002/Beige/a.jpg")]}
+    def test_sem_fotos_nao_quebra(self) -> None:
+        produto = _produto()
         pipeline = PipelineFotos(
-            _CatalogoFotosFake(arquivos),
-            _ProcessadorImagemFake(),
-            _ArmazenamentoImagensEmMemoria(),
+            _CatalogoFotosFake([]), _ProcessadorImagemFake(), _ArmazenamentoImagensEmMemoria()
         )
         estado = _estado(produto)
 
         fotos = pipeline.processar(produto, estado)
 
-        assert len(fotos) == 1
-        assert fotos[0].cor == "Beige"
+        assert fotos == []
+        assert estado.status is StatusProduto.FOTOS_PUBLICADAS
 
     def test_falha_ao_processar_uma_foto_aborta_o_produto(self) -> None:
-        produto = _produto(("Beige", "Rosa"))
-        arquivo_com_falha = Path("fotos/3254002/Rosa/a.jpg")
-        arquivos = {
-            "Beige": [Path("fotos/3254002/Beige/a.jpg")],
-            "Rosa": [arquivo_com_falha],
-        }
+        produto = _produto()
+        arquivo_com_falha = Path("fotos/3254002/b.jpg")
+        arquivos = [Path("fotos/3254002/a.jpg"), arquivo_com_falha]
         pipeline = PipelineFotos(
             _CatalogoFotosFake(arquivos),
             _ProcessadorImagemFake(falhar_em=arquivo_com_falha),
@@ -159,24 +145,10 @@ class TestProcessar:
 
         assert estado.status is StatusProduto.ERRO_FOTOS
 
-    def test_cor_com_acento_na_planilha_casa_com_pasta_sem_acento(self) -> None:
-        produto = _produto(("Azul Aço",))
-        arquivos = {"azul aco": [Path("fotos/3254002/azul aco/a.jpg")]}
-        pipeline = PipelineFotos(
-            _CatalogoFotosFake(arquivos),
-            _ProcessadorImagemFake(),
-            _ArmazenamentoImagensEmMemoria(),
-        )
-        estado = _estado(produto)
-
-        fotos = pipeline.processar(produto, estado)
-
-        assert len(fotos) == 1
-
     def test_falha_ao_publicar_aborta_o_produto(self) -> None:
-        produto = _produto(("Beige",))
-        chave = "produtos/3254002/kiki-conjunto-baby-malha-e-moletom-beige-1.jpg"
-        arquivos = {"Beige": [Path("fotos/3254002/Beige/a.jpg")]}
+        produto = _produto()
+        chave = "produtos/3254002/kiki-conjunto-baby-malha-e-moletom-1.jpg"
+        arquivos = [Path("fotos/3254002/a.jpg")]
         pipeline = PipelineFotos(
             _CatalogoFotosFake(arquivos),
             _ProcessadorImagemFake(),
@@ -190,9 +162,9 @@ class TestProcessar:
         assert estado.status is StatusProduto.ERRO_FOTOS
 
     def test_foto_publicada_mas_inacessivel_aborta_o_produto(self) -> None:
-        produto = _produto(("Beige",))
-        chave = "produtos/3254002/kiki-conjunto-baby-malha-e-moletom-beige-1.jpg"
-        arquivos = {"Beige": [Path("fotos/3254002/Beige/a.jpg")]}
+        produto = _produto()
+        chave = "produtos/3254002/kiki-conjunto-baby-malha-e-moletom-1.jpg"
+        arquivos = [Path("fotos/3254002/a.jpg")]
         pipeline = PipelineFotos(
             _CatalogoFotosFake(arquivos),
             _ProcessadorImagemFake(),
