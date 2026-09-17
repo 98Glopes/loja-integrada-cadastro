@@ -2,7 +2,7 @@
 
 **Responsabilidade:** reprovar cedo (antes de gastar LLM/upload) tudo que faria a importação
 real da Loja Integrada falhar, e avisar sobre o que merece atenção sem bloquear.
-**Estado:** implementado pela task 05 · última atualização 2026-09-14 (task 05)
+**Estado:** implementado pela task 05 · última atualização 2026-09-17 (fix ad-hoc, ADR-009)
 
 ## Arquivos
 
@@ -34,14 +34,12 @@ class ResultadoValidacao:
 
 # services/ports/catalogo_fotos.py
 class CatalogoFotos(Protocol):
-    def listar(self, sku_pai: str) -> dict[str, list[Path]]: ...
-    def cores_disponiveis(self, sku_pai: str) -> list[str]: ...
+    def listar(self, sku_pai: str) -> list[Path]: ...
 
 # infra/catalogo_fotos_diretorio.py
 class CatalogoFotosDiretorio:
     def __init__(self, raiz: Path) -> None: ...
-    def listar(self, sku_pai: str) -> dict[str, list[Path]]: ...
-    def cores_disponiveis(self, sku_pai: str) -> list[str]: ...
+    def listar(self, sku_pai: str) -> list[Path]: ...
 
 EXTENSOES_ACEITAS: frozenset[str]   # {".jpg", ".jpeg", ".png", ".webp", ".heic"}
 
@@ -101,17 +99,13 @@ reprovado (N problema(s), M aviso(s))`); código de saída `0` se aprovado, `1`
    problema em cada ocorrência.
 8. **Preço/estoque**: preço ≤ 0 ou estoque < 0 vira problema.
 9. **Mais de 50 variações** no produto vira problema.
-10. **Fotos**: `CatalogoFotos.listar(sku_pai)` é comparado com as cores do produto ignorando
-    caixa/acento (`_normalizar`, NFKD + casefold — essa comparação vive no validador, não no
-    catálogo, porque só o validador tem os dois lados: a cor da planilha e o nome da subpasta).
-    Cor sem subpasta correspondente ou subpasta sem nenhum arquivo vira problema; subpasta que
-    não casa com nenhuma cor do produto vira aviso; mais de 5 fotos no total (`MAX_FOTOS_POR_PRODUTO`)
-    vira aviso.
+10. **Fotos** (sem cor desde o ADR-009 — foto vale para o produto inteiro):
+    `CatalogoFotos.listar(sku_pai)` vazio vira problema ("nenhuma foto encontrada para o
+    produto"); mais de 5 fotos no total (`MAX_FOTOS_POR_PRODUTO`) vira aviso.
 
-`CatalogoFotosDiretorio` só lê o disco (`raiz/<sku_pai>/<cor>/*`), sem normalizar nome de pasta:
-`cores_disponiveis` lista subpastas sem abrir arquivo nenhum; `listar` monta o dict cor→arquivos,
-filtrando por `EXTENSOES_ACEITAS` (case-insensitive) e ordenando por nome (case-insensitive).
-`sku_pai` sem pasta devolve `{}`/`[]`, sem lançar exceção.
+`CatalogoFotosDiretorio` só lê o disco (`raiz/<sku_pai>/*`, sem subpasta), filtrando por
+`EXTENSOES_ACEITAS` (case-insensitive) e ordenando por nome (case-insensitive). `sku_pai` sem
+pasta, ou pasta sem nenhum arquivo aceito, devolve `[]`, sem lançar exceção.
 
 ## Limites
 
@@ -128,12 +122,12 @@ filtrando por `EXTENSOES_ACEITAS` (case-insensitive) e ordenando por nome (case-
 
 - `tests/unit/models/test_resultado_validacao.py` — `aprovado` com/sem problema.
 - `tests/unit/infra/test_catalogo_fotos_diretorio.py` — extensões variadas/case, ordenação,
-  `sku_pai` sem pasta, subpasta sem arquivo aceito, `cores_disponiveis` só pastas.
-- `tests/unit/services/test_validador_entrada.py` — `CatalogoFotosFake` (dict em memória) +
-  `DadosMestre` de teste; um teste por regra (marca alias/proibida/desconhecida/sem perfil, cor,
-  tamanho, GTIN formato/dígito/duplicado, preço, estoque, combinação repetida, > 50 variações,
-  `sku_pai` duplicado, categoria níveis/formatação/referência, campo obrigatório vazio, fotos
-  faltando/vazias/sobrando/casamento por acento-caixa) e um lote feliz.
+  `sku_pai` sem pasta, pasta sem arquivo aceito, subpastas antigas ignoradas.
+- `tests/unit/services/test_validador_entrada.py` — `CatalogoFotosFake` (dict `sku_pai` →
+  lista de arquivos) + `DadosMestre` de teste; um teste por regra (marca alias/proibida/
+  desconhecida/sem perfil, cor, tamanho, GTIN formato/dígito/duplicado, preço, estoque,
+  combinação repetida, > 50 variações, `sku_pai` duplicado, categoria níveis/formatação/
+  referência, campo obrigatório vazio, fotos faltando/vazias/sobrando) e um lote feliz.
 - `tests/unit/test_fixture_lote_piloto.py` — roda o pipeline real (leitor openpyxl + catálogo de
   diretório + `CarregadorRecursos().dados_mestre()` do pacote) sobre
   `tests/fixtures/lote-piloto/` e confere que só os dois defeitos propositais (cor inválida do
@@ -150,3 +144,8 @@ filtrando por `EXTENSOES_ACEITAS` (case-insensitive) e ordenando por nome (case-
 - Task 05 (2026-09-14): criação do módulo — `ResultadoValidacao`/`ProblemaValidacao`,
   `CatalogoFotos`/`CatalogoFotosDiretorio`, `ValidadorEntrada`, subcomando `validar`, fixture
   `tests/fixtures/lote-piloto/`.
+- 2026-09-17 (fix ad-hoc, branch `fix/fix-validation`, sem task numerada — ADR-009 em
+  `ARQUITETURA.md`): foto deixa de ter cor. `CatalogoFotos.listar` devolve `list[Path]` (era
+  `dict[cor, list[Path]]`); `cores_disponiveis` removido; `_validar_fotos` simplificado para só
+  "o SKU tem alguma foto" — perde a checagem por cor e o aviso de subpasta sem cor
+  correspondente.

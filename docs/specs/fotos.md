@@ -2,7 +2,7 @@
 
 **Responsabilidade:** transformar as fotos brutas de um produto em JPEGs leves com nome SEO
 determinístico, publicá-las e escolher quais até 5 vão para o produto pai.
-**Estado:** implementado pelas tasks 07, 08 · última atualização 2026-09-14 (task 08)
+**Estado:** implementado pelas tasks 07, 08 · última atualização 2026-09-17 (fix ad-hoc, ADR-009)
 
 ## Arquivos
 
@@ -32,8 +32,7 @@ def slugificar(texto: str) -> str:
 @dataclass(frozen=True)
 class FotoProduto:
     sku_pai: str
-    cor: str
-    ordem: int  # posição alfabética do arquivo dentro da subpasta da cor (1, 2, 3…)
+    ordem: int  # posição alfabética do arquivo dentro da pasta do SKU (1, 2, 3…)
     arquivo_origem: Path  # caminho da foto bruta
     nome: str  # <nome-nomeado>.jpg
     chave: str  # produtos/<sku-pai>/<nome> — mesma chave usada no R2 (task 08)
@@ -47,7 +46,7 @@ MAX_IMAGENS_PAI = 5
 
 class NomeadorFotos:
     @staticmethod
-    def nomear(produto: ProdutoEntrada, cor: str, ordem: int) -> str: ...
+    def nomear(produto: ProdutoEntrada, ordem: int) -> str: ...
 
 
 class SeletorImagensPai:
@@ -86,25 +85,21 @@ class PipelineFotos:
 ## Comportamento
 
 **`slugificar`** — NFKD remove acentos (`"Azul aço"` → `"azul-aco"`), qualquer sequência de
-caracteres fora de `[a-z0-9]` vira um único hífen, hífens nas pontas são removidos. Usado tanto
-para montar o nome final do arquivo quanto (dentro de `PipelineFotos`) para casar a cor da
-planilha com o nome da subpasta no disco, sem depender de acento/caixa coincidirem.
+caracteres fora de `[a-z0-9]` vira um único hífen, hífens nas pontas são removidos. Usado para
+montar o nome final do arquivo publicado (marca/tipo/nome do fornecedor).
 
-**`NomeadorFotos.nomear(produto, cor, ordem)`** — monta
+**`NomeadorFotos.nomear(produto, ordem)`** — monta
 `slugificar(marca)-slugificar(tipo_peca)-slugificar(nome_fornecedor)`, removendo de
 `nome_fornecedor` os tokens que repetem, *desde o início e token a token*, os tokens de
 `tipo_peca` (cobre prefixos compostos: tipo `"Conjunto Baby"` remove `conjunto-baby` inteiro de
 `nome_fornecedor`, não só o primeiro token). O resultado é truncado em 60 caracteres (`rstrip`
-de hífen solto) antes de concatenar `-<cor-slug>-<ordem>.jpg`. `ordem` é responsabilidade de
-quem chama (`PipelineFotos`, que numera pela ordem alfabética que `CatalogoFotos.listar` já
-devolve).
+de hífen solto) antes de concatenar `-<ordem>.jpg`. `ordem` é responsabilidade de quem chama
+(`PipelineFotos`, que numera pela ordem alfabética que `CatalogoFotos.listar` já devolve). Sem
+segmento de cor desde o ADR-009 — foto não tem cor, vale para o produto inteiro.
 
-**`SeletorImagensPai.selecionar(fotos)`** — agrupa por `cor` preservando a ordem de primeira
-aparição na lista recebida (que `PipelineFotos` monta na ordem `produto.cores`, ou seja, a
-ordem da planilha), ordena cada grupo por `ordem`, e intercala com
-`itertools.zip_longest(*grupos)` — uma "rodada" por vez (a `-1` de cada cor, depois a `-2` de
-cada cor…) — truncando em `MAX_IMAGENS_PAI` com `itertools.islice`. Cor sem fotos suficientes
-não bloqueia: `zip_longest` preenche com `None`, descartado antes do corte.
+**`SeletorImagensPai.selecionar(fotos)`** — as `MAX_IMAGENS_PAI` primeiras fotos, ordenadas por
+`ordem` (ADR-009: sem cor por foto, não há mais "por cor" para equilibrar — antes fazia
+round-robin por cor com `itertools.zip_longest`).
 
 **`ProcessadorImagemPillow.preparar(origem)`** — abre com Pillow (`pillow_heif` registrado como
 opener de HEIF se importável; `try/except ImportError` — sem a lib, `.heic` falha com
@@ -116,11 +111,10 @@ de 5 até `< tamanho_max_kb * 1024` (piso 60). Se ainda exceder no piso, redimen
 erro (best-effort — ver "Limites"). Qualquer `OSError`/`ValueError` do Pillow vira
 `ErroProcessamentoImagem(origem, motivo)`.
 
-**`PipelineFotos.processar(produto, estado)`** — para cada cor em `produto.cores` (ordem da
-planilha), para cada arquivo que `catalogo.listar(produto.sku_pai)` devolve para aquela cor (já
-em ordem alfabética; a cor é casada via `slugificar` para tolerar diferença de acento/caixa
-entre planilha e pasta): nomeia, processa, publica (`armazenamento.publicar`), **confirma que a
-URL ficou acessível (`armazenamento.existe(url)`; se `False`, levanta `ErroPublicacaoImagem`,
+**`PipelineFotos.processar(produto, estado)`** — para cada arquivo que
+`catalogo.listar(produto.sku_pai)` devolve (já em ordem alfabética, direto da pasta do SKU, sem
+agrupar por cor): nomeia, processa, publica (`armazenamento.publicar`), **confirma que a URL
+ficou acessível (`armazenamento.existe(url)`; se `False`, levanta `ErroPublicacaoImagem`,
 task 08)** e monta um `FotoProduto`. No fim, `SeletorImagensPai.selecionar` escolhe as imagens
 do pai e `estado.registrar_fotos(fotos, imagens_pai)` é chamado. Qualquer
 `ErroProcessamentoImagem` ou `ErroPublicacaoImagem` durante o laço aborta o produto inteiro:
@@ -148,26 +142,25 @@ ver `docs/specs/tasks/07-pipeline-fotos.md`).
 - `tests/unit/models/test_slug.py` — acentos, pontuação/espaços múltiplos, hífens nas pontas,
   string vazia.
 - `tests/unit/models/test_nomeador_fotos.py` — `NomeadorFotos.nomear`: exemplo literal do
-  §5.2 (`onda-marinha-conjunto-baby-malha-e-moletom-azul-aco-1.jpg`), sem dedupe, dedupe total
-  (nome igual ao tipo), truncamento em 60, cor com acento/espaço. `SeletorImagensPai.selecionar`:
-  2 cores × 4 fotos, 1 cor com 6 fotos (limite 5), total < 5, lista vazia.
+  §5.2 (`onda-marinha-conjunto-baby-malha-e-moletom-1.jpg`), sem dedupe, dedupe total (nome
+  igual ao tipo), truncamento em 60. `SeletorImagensPai.selecionar`: mais de 5 fotos limita em
+  5 pela ordem, total < 5 devolve todas em ordem, lista vazia.
 - `tests/unit/infra/test_processador_imagem_pillow.py` — JPEG 3000×4000 com ruído real e EXIF
   `Orientation=6` → ≤ 1600 px, < 500 KB, sem EXIF; PNG com canal alfa → RGB; HEIC (encode +
   decode reais via `pillow_heif`, `skipif` só se a lib faltar); arquivo corrompido →
   `ErroProcessamentoImagem`.
 - `tests/unit/services/test_pipeline_fotos.py` — fakes inline (`_CatalogoFotosFake`,
   `_ProcessadorImagemFake`, `_ArmazenamentoImagensEmMemoria`, duck typing, sem herdar Protocol
-  nem `unittest.mock`): caminho feliz (nomes/chaves/round-robin corretos, status
-  `fotos-publicadas`), falha no meio do lote (status `erro-fotos`, exceção relançada), cor sem
-  fotos não quebra, cor com acento na planilha casa com pasta sem acento, falha ao publicar
-  (`ErroPublicacaoImagem`) aborta o produto, foto publicada mas inacessível
-  (`existe() is False`) aborta o produto (task 08).
+  nem `unittest.mock`): caminho feliz (nomes/chaves corretos em ordem, status
+  `fotos-publicadas`), sku sem fotos não quebra, falha no meio do lote (status `erro-fotos`,
+  exceção relançada), falha ao publicar (`ErroPublicacaoImagem`) aborta o produto, foto
+  publicada mas inacessível (`existe() is False`) aborta o produto (task 08).
 - `tests/integration/test_pipeline_fotos_poc.py` (`@pytest.mark.integration`) — pipeline
   completo (com `ProcessadorImagemPillow` e `ArmazenamentoImagensDiretorio` reais, não fakes)
   sobre as 4 fotos reais de `poc/fotos_input/`: confirma o critério de aceite da task 07 com
   dado real, não só sintético. Continua gravando local, não toca o R2.
 - `tests/integration/test_pipeline_fotos_r2.py` (`@pytest.mark.integration`, task 08) — mesmo
-  pipeline com `ArmazenamentoImagensR2` real, sobre a mesma estrutura `<sku-pai>/<cor>/` de
+  pipeline com `ArmazenamentoImagensR2` real, sobre a mesma estrutura `<sku-pai>/*` de
   `tests/fixtures/lote-piloto/fotos/` mas com fotos reais de `poc/fotos_input/` copiadas no
   lugar (`_copiar_estrutura_com_fotos_reais`) — os JPEGs da fixture do lote piloto são "stub" de
   22 bytes propositais (task 05), não decodificáveis pelo Pillow real. Confirma o critério de
@@ -183,3 +176,11 @@ ver `docs/specs/tasks/07-pipeline-fotos.md`).
 - Task 08 (2026-09-14): `PipelineFotos` passa a confirmar `armazenamento.existe(url)` após
   publicar e a capturar `ErroPublicacaoImagem` (além de `ErroProcessamentoImagem`) no mesmo
   fail-fast. Ver `docs/specs/tasks/08-publicacao-r2.md`.
+- 2026-09-17 (fix ad-hoc, branch `fix/fix-validation`, sem task numerada — ADR-009 em
+  `ARQUITETURA.md`): foto deixa de ter cor. `fotos/<sku-pai>/<cor>/*` vira `fotos/<sku-pai>/*`;
+  `FotoProduto` perde o campo `cor`; `NomeadorFotos.nomear` perde o parâmetro `cor` (nome
+  publicado sem `-<cor>-`); `SeletorImagensPai.selecionar` vira "as 5 primeiras em ordem" (sem
+  round-robin por cor); `PipelineFotos.processar` processa a lista flat direto, sem laço por
+  cor. Motivado pelo usuário depois de testar `processar` contra planilhas reais: organizar
+  fotos por subpasta de cor era mais trabalho do que o benefício justificava, já que a Loja
+  Integrada só usa imagem no produto pai mesmo.

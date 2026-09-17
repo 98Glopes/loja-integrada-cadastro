@@ -62,7 +62,7 @@ Operação: a dona da loja preenche planilha e fotos; o desenvolvedor roda a CLI
 | GTIN | **Obrigatório por variação**; vai para a coluna `gtin` da linha filha. Revoga a regra "GTIN em branco" da POC. |
 | Preço e estoque | Vêm da planilha, por variação. |
 | Peso e dimensões | Padrão único configurável para todos os produtos (`0.1 kg`, `4×22×22 cm`, como na POC). |
-| Fotos | `fotos/<sku-pai>/<cor>/*.jpg`; ordem alfabética dos arquivos define a numeração; **sem** classificação de ângulo; nomeadas por regra (não IA). |
+| Fotos | `fotos/<sku-pai>/*.jpg`, sem subpasta por cor — foto não tem cor, vale para o produto inteiro (ADR-009); ordem alfabética dos arquivos define a numeração; **sem** classificação de ângulo; nomeadas por regra (não IA). |
 | Processamento de imagem | JPEG, lado maior 1600 px, < 500 KB, EXIF removido, orientação corrigida. Entrada aceita jpg/png/webp/heic. |
 | R2 | Bucket já existe com domínio público. Chave `produtos/<sku-pai>/<nome>.jpg`. **Sempre sobrescreve** na reexecução. |
 | Agentes | **Por grupo**: Copywriter (título + descrição HTML) → SEO (tag title + meta description) → QA (veredito estruturado). Reprovação → retry do grupo culpado (máx. configurável, padrão 2). |
@@ -84,7 +84,7 @@ Operação: a dona da loja preenche planilha e fotos; o desenvolvedor roda a CLI
                  dona da loja                               desenvolvedor
         ┌──────────────────────────┐              ┌──────────────────────────────────┐
         │ produtos.xlsx            │              │ loja-integrada-cadastro processar │
-        │ fotos/<sku>/<cor>/*.jpg  │ ───────────▶ │   --planilha produtos.xlsx        │
+        │ fotos/<sku>/*.jpg        │ ───────────▶ │   --planilha produtos.xlsx        │
         └──────────────────────────┘              │   --fotos fotos/ --lote 2026-09-w38│
                                                   └──────────────┬───────────────────┘
                                                                  ▼
@@ -162,27 +162,30 @@ O que **não** está na entrada porque é derivado ou configurado: peso/dimensõ
 ```
 fotos/
   3254002/            ← sku-pai
-    Beige/            ← nome da cor (case-insensitive, acento ignorado; precisa casar com a planilha)
-      20250920_113424.jpg
-      20250920_113552.jpg
-    Rosa/
-      IMG_0001.HEIC
+    20250920_113424.jpg
+    20250920_113552.jpg
+    IMG_0001.HEIC
 ```
 
-O validador exige que cada cor da planilha tenha uma subpasta com ≥ 1 imagem; subpasta sem cor
-correspondente na planilha gera aviso (não bloqueia).
+Sem subpasta por cor: a foto não tem cor — vale para o produto inteiro, do jeito que os arquivos
+vieram da câmera/celular, sem precisar renomear nem organizar nada (ADR-009). Motivo: a Loja
+Integrada só aceita imagem no produto pai, nunca na variação/filha (§5.3), então "foto por cor"
+nunca influenciou o que é importado — só servia para nome de arquivo e para uma seleção
+"justa" das até 5 imagens do pai, ambas dispensáveis. O validador exige só que o SKU tenha
+≥ 1 imagem.
 
 ### 5.2 Nomeação (regra determinística)
 
-✅ Implementado (task 07, `models/slug.py` + `models/nomeador_fotos.py`).
+✅ Implementado (task 07, `models/slug.py` + `models/nomeador_fotos.py`); sem segmento de cor
+desde o ADR-009.
 
-`<marca>-<tipo-peca>-<nome-fornecedor>-<cor>-<n>.jpg`, tudo slugificado (minúsculas, sem
-acento, hífens), `n` = posição do arquivo na ordem alfabética dentro da subpasta (1, 2, 3…).
-Tokens do `tipo-peca` repetidos no início de `nome-fornecedor` são removidos; o nome é truncado
-em 60 caracteres antes de `-<cor>-<n>`.
+`<marca>-<tipo-peca>-<nome-fornecedor>-<n>.jpg`, tudo slugificado (minúsculas, sem acento,
+hífens), `n` = posição do arquivo na ordem alfabética dentro da pasta do SKU (1, 2, 3…). Tokens
+do `tipo-peca` repetidos no início de `nome-fornecedor` são removidos; o nome é truncado em 60
+caracteres antes de `-<n>`.
 
-Exemplo: marca `Onda Marinha`, tipo `Conjunto`, nome `Conjunto Baby Malha e Moletom`, cor
-`Azul aco`, 1ª foto → `onda-marinha-conjunto-baby-malha-e-moletom-azul-aco-1.jpg`.
+Exemplo: marca `Onda Marinha`, tipo `Conjunto`, nome `Conjunto Baby Malha e Moletom`, 1ª foto →
+`onda-marinha-conjunto-baby-malha-e-moletom-1.jpg`.
 
 Motivo para não usar a IA aqui: o nome fica estável entre reexecuções e a etapa de fotos não
 depende da etapa de textos.
@@ -217,11 +220,10 @@ parcial é publicada/contada, o produto vai para `erro-fotos` e a exceção
 usuário nas tasks 07/08, fail-fast em vez de best-effort por foto, para não repetir a falha
 silenciosa de imagem da POC.
 
-Seleção das até 5 imagens do pai (a Loja Integrada só aceita imagem no pai): primeiro a foto
-`-1` de cada cor na ordem da planilha, depois as `-2` de cada cor, e assim por diante, até 5.
-Assim toda cor aparece antes de qualquer cor ter duas fotos. As demais ficam publicadas no R2
-sem uso (custo desprezível) e listadas no relatório. ✅ Implementado (task 07,
-`SeletorImagensPai`).
+Seleção das até 5 imagens do pai (a Loja Integrada só aceita imagem no pai): as 5 primeiras
+fotos em ordem alfabética (sem cor, não há mais o que "equilibrar" entre variações — ADR-009).
+As demais ficam publicadas no R2 sem uso (custo desprezível) e listadas no relatório.
+✅ Implementado (task 07, `SeletorImagensPai`; simplificado no ADR-009).
 
 Cloudflare R2 é compatível com S3: o conector usa `boto3` com `endpoint_url =
 https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, região `auto`. ✅ Implementado (task 08,
@@ -451,7 +453,7 @@ src/loja_integrada_cadastro/
     ✅ layout_planilha_entrada.py    as 14 colunas da planilha de entrada, na ordem sugerida (task 04)
     ✅ problema_linha_planilha.py    ProblemaLinhaPlanilha (linha, coluna, motivo) (task 04)
     ✅ resultado_validacao.py        ProblemaValidacao, ResultadoValidacao {problemas, avisos, aprovado} (task 05)
-    ✅ foto_produto.py               FotoProduto (frozen: sku_pai, cor, ordem, arquivo_origem, nome, chave, url, bytes) (task 07)
+    ✅ foto_produto.py               FotoProduto (frozen: sku_pai, ordem, arquivo_origem, nome, chave, url, bytes) (task 07; perdeu `cor` no ADR-009)
     ✅ textos_produto.py             TextosProduto (4 campos) + como_mapa() (task 09)
     🔲 veredicto_qa.py               VeredictoQa + ProblemaQa
     ✅ estado_produto.py             EstadoProduto (fábrica registrar_validacao + 8 métodos de intenção; `fotos: tuple[FotoProduto, ...]` desde a task 07) e status_produto.py: StatusProduto (Enum) (task 06)
@@ -462,7 +464,7 @@ src/loja_integrada_cadastro/
     ✅ relatorio_lote.py             Relatorio (frozen: markdown, dados) (task 11)
     🔲 regras_texto.py               limites e validações de regra dos 4 campos (puras)
     ✅ slug.py                       slugificar(texto) -> str (sem acento, minúsculas, hífens) (task 07)
-    ✅ nomeador_fotos.py             NomeadorFotos.nomear(produto, cor, ordem) -> str; SeletorImagensPai.selecionar(fotos) -> list (task 07)
+    ✅ nomeador_fotos.py             NomeadorFotos.nomear(produto, ordem) -> str; SeletorImagensPai.selecionar(fotos) -> list (task 07; sem `cor` desde o ADR-009)
     exceptions/
       ✅ erro_configuracao.py        ErroConfiguracao(variavel, valor_invalido) (task 01)
       ✅ erro_recursos.py            ErroRecursos(recurso, motivo) (task 02)
@@ -476,7 +478,7 @@ src/loja_integrada_cadastro/
   🔲 services/
     🔲 ports/
       ✅ leitor_planilha_entrada.py  LeitorPlanilhaEntrada.ler(caminho) -> list[ProdutoEntrada] (task 04)
-      ✅ catalogo_fotos.py           CatalogoFotos.listar(sku_pai) -> dict[cor, list[caminho]]; cores_disponiveis(sku_pai) (task 05)
+      ✅ catalogo_fotos.py           CatalogoFotos.listar(sku_pai) -> list[caminho] (task 05; era dict[cor, list[caminho]] + cores_disponiveis antes do ADR-009)
       ✅ processador_imagem.py       ProcessadorImagem.preparar(origem: Path) -> bytes (JPEG final) (task 07)
       ✅ armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, dados) -> url; existe(url) -> bool (task 07; contrato confirmado sem alteração na task 08 — ver ADR-006)
       ✅ gerador_textos.py           GeradorTextos.gerar(produto, estado) -> TextosProduto (task 09)
@@ -763,3 +765,28 @@ desvio altera uma decisão de arquitetura (não para desvios locais — esses fi
   `ErroConfiguracao` nomeando a variável ausente, antes de ler a planilha. Reduz uma decisão de
   design (semântica da flag) e um caminho de código a menos para manter.
 - **Task:** 11.
+
+### ADR-009 — Fotos sem cor: `fotos/<sku-pai>/*.jpg` (17/09/2026)
+
+- **Contexto:** rodando `processar` sobre lotes reais (fora do ciclo de tasks numeradas — fix
+  ad-hoc na branch `fix/fix-validation`), o usuário pediu para simplificar
+  `fotos/<sku-pai>/<cor>/*.jpg` (§5.1 original) para `fotos/<sku-pai>/*.jpg`, eliminando a
+  necessidade de criar uma subpasta por cor ao preparar o lote. A primeira proposta (cor pelo
+  nome do arquivo, ex. `beige-1.jpg`) foi descartada pelo usuário depois de entender o
+  trade-off: produto de 2+ cores ainda exigiria renomear cada arquivo antes de rodar. Decidiu-se
+  então que a foto não carrega cor nenhuma.
+- **Decisão:** `fotos/<sku-pai>/*.jpg`, sem subpasta nem convenção de nome — qualquer arquivo de
+  imagem solto na pasta do SKU conta, do jeito que veio da câmera/celular. `CatalogoFotos.listar`
+  devolve `list[Path]` (era `dict[cor, list[Path]]`); `cores_disponiveis` foi removido;
+  `FotoProduto` perdeu o campo `cor`; `NomeadorFotos.nomear` perdeu o parâmetro `cor` (nome
+  publicado perde o segmento `-<cor>-`); `SeletorImagensPai.selecionar` vira "as 5 primeiras em
+  ordem" (sem round-robin); `ValidadorEntrada._validar_fotos` perde a checagem "cada cor da
+  planilha precisa ter foto própria" e o aviso de "subpasta sem cor correspondente" — fica só "o
+  SKU precisa ter pelo menos 1 foto".
+- **Consequência:** validação de fotos fica menos rígida — um produto passa desde que tenha
+  qualquer foto no SKU, mesmo que na prática todas sejam de uma única variação visual (perda de
+  garantia aceita conscientemente pelo usuário). Ganho: preparar o lote fica mais simples,
+  especialmente para os muitos produtos do catálogo real que têm só 1 cor (nesses casos, fotos
+  da câmera podem ir direto pra pasta sem nenhuma organização). Testado com importação real na
+  Loja Integrada após a mudança (confirmado pelo usuário).
+- **Task:** nenhuma (fix ad-hoc, branch `fix/fix-validation`, commit `6bb7c76`).
