@@ -3,20 +3,24 @@ from pathlib import Path
 import pytest
 
 from loja_integrada_cadastro.config.composicao import (
+    montar_cliente_llm,
     montar_gerador_modelo_entrada,
     montar_gerador_textos,
     montar_leitor_planilha_entrada,
     montar_montador_planilha,
     montar_pipeline_fotos,
     montar_processador_lote,
+    montar_repositorio_prompts,
     montar_validador_entrada,
 )
 from loja_integrada_cadastro.config.configuracao import Configuracao
+from loja_integrada_cadastro.infra.cliente_llm_anthropic import ClienteLlmAnthropic
 from loja_integrada_cadastro.infra.gerador_modelo_entrada_openpyxl import GeradorModeloEntrada
 from loja_integrada_cadastro.infra.gerador_textos_dummy import GeradorTextosDummy
 from loja_integrada_cadastro.infra.leitor_planilha_entrada_openpyxl import (
     LeitorPlanilhaEntradaOpenpyxl,
 )
+from loja_integrada_cadastro.infra.repositorio_prompts_jinja import RepositorioPromptsJinja
 from loja_integrada_cadastro.models.exceptions.erro_configuracao import ErroConfiguracao
 from loja_integrada_cadastro.services.montador_planilha import MontadorPlanilha
 from loja_integrada_cadastro.services.pipeline_fotos import PipelineFotos
@@ -57,6 +61,21 @@ def test_montar_gerador_textos_devolve_gerador_dummy() -> None:
     gerador = montar_gerador_textos(Configuracao())
 
     assert isinstance(gerador, GeradorTextosDummy)
+
+
+def test_montar_cliente_llm_sem_chave_levanta_erro_configuracao() -> None:
+    with pytest.raises(ErroConfiguracao, match="ANTHROPIC_API_KEY"):
+        montar_cliente_llm(Configuracao())
+
+
+def test_montar_cliente_llm_devolve_conector_anthropic_sem_tocar_a_rede() -> None:
+    cliente = montar_cliente_llm(Configuracao(anthropic_api_key="sk-ant-teste"))
+
+    assert isinstance(cliente, ClienteLlmAnthropic)
+
+
+def test_montar_repositorio_prompts_devolve_repositorio_jinja() -> None:
+    assert isinstance(montar_repositorio_prompts(), RepositorioPromptsJinja)
 
 
 def test_montar_montador_planilha_devolve_montador_funcional() -> None:

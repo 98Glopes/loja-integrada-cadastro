@@ -1,3 +1,5 @@
+from datetime import date
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -5,6 +7,7 @@ import pytest
 from loja_integrada_cadastro.infra.carregador_recursos import (
     CarregadorRecursos,
     montar_dados_mestre,
+    montar_tabela_precos_llm,
 )
 from loja_integrada_cadastro.models.exceptions.erro_recursos import ErroRecursos
 
@@ -76,3 +79,64 @@ def test_montar_dados_mestre_falha_com_tamanho_nao_string() -> None:
 def test_montar_dados_mestre_falha_com_conteudo_nao_mapeamento() -> None:
     with pytest.raises(ErroRecursos):
         montar_dados_mestre(["não é um dict"])
+
+
+def _dict_precos_completo() -> dict[str, Any]:
+    return {
+        "data_referencia": date(2026, 9, 16),
+        "modelos": {
+            "claude-opus-5": {
+                "entrada": 5.0,
+                "saida": 25,
+                "cache_leitura": 0.5,
+                "cache_escrita": 6.25,
+            }
+        },
+    }
+
+
+def test_precos_llm_carrega_do_pacote_real_com_os_modelos_da_arquitetura() -> None:
+    tabela = CarregadorRecursos().precos_llm()
+
+    assert set(tabela.precos) >= {
+        "claude-opus-5",
+        "claude-opus-4-8",
+        "claude-sonnet-5",
+        "claude-haiku-4-5",
+    }
+    assert tabela.exigir("claude-opus-5").saida == Decimal("25")
+    assert tabela.data_referencia == date(2026, 9, 16)
+
+
+def test_montar_tabela_precos_llm_converte_numeros_em_decimal_exato() -> None:
+    tabela = montar_tabela_precos_llm(_dict_precos_completo())
+
+    preco = tabela.exigir("claude-opus-5")
+    assert preco.entrada == Decimal("5.0")
+    assert preco.saida == Decimal("25")
+    assert preco.cache_escrita == Decimal("6.25")
+
+
+@pytest.mark.parametrize("chave", ["data_referencia", "modelos"])
+def test_montar_tabela_precos_llm_falha_sem_campo_obrigatorio(chave: str) -> None:
+    bruto = _dict_precos_completo()
+    del bruto[chave]
+
+    with pytest.raises(ErroRecursos, match=chave):
+        montar_tabela_precos_llm(bruto)
+
+
+def test_montar_tabela_precos_llm_falha_com_preco_nao_numerico() -> None:
+    bruto = _dict_precos_completo()
+    bruto["modelos"]["claude-opus-5"]["saida"] = "25"
+
+    with pytest.raises(ErroRecursos, match="'saida' do modelo 'claude-opus-5'"):
+        montar_tabela_precos_llm(bruto)
+
+
+def test_montar_tabela_precos_llm_falha_com_preco_ausente() -> None:
+    bruto = _dict_precos_completo()
+    del bruto["modelos"]["claude-opus-5"]["cache_leitura"]
+
+    with pytest.raises(ErroRecursos, match="cache_leitura"):
+        montar_tabela_precos_llm(bruto)

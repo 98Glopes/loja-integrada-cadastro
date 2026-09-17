@@ -1,6 +1,6 @@
 # Testes de integração
 
-Testam conectores reais de `infra/` (R2, e futuramente Anthropic, site público) contra a
+Testam conectores reais de `infra/` (R2, Anthropic, e futuramente site público) contra a
 infraestrutura de verdade. Ficam desligados por padrão (`addopts = "-m 'not integration'"` em
 `pyproject.toml`) para não rodar em CI nem exigir credenciais em toda execução de `pytest`.
 
@@ -30,8 +30,14 @@ R2_BUCKET=...
 R2_URL_PUBLICA=...
 ```
 
-Sem essas variáveis, os testes de R2 são pulados automaticamente (`pytest.skip`) — não falham,
-para não travar quem roda `pytest -m integration` sem as credenciais.
+Para o teste da Anthropic (`test_cliente_llm_anthropic.py`):
+
+```
+ANTHROPIC_API_KEY=...
+```
+
+Sem essas variáveis, os testes correspondentes são pulados automaticamente (`pytest.skip`) — não
+falham, para não travar quem roda `pytest -m integration` sem as credenciais.
 
 ## O que esses testes fazem no ambiente real
 
@@ -42,5 +48,9 @@ para não travar quem roda `pytest -m integration` sem as credenciais.
   no bucket real — **não apaga** os objetos ao final; eles expiram pela regra de lifecycle de 7
   dias configurada no bucket (ver `docs/specs/tasks/08-publicacao-r2.md`, seção "Desvios e
   decisões").
+- `test_cliente_llm_anthropic.py` (task 12): faz **duas chamadas reais** ao modelo de
+  `LLM_MODELO_COPYWRITER` (padrão Opus 5, effort `low`, system ~4,5k tokens) com um esquema
+  trivial e confere que a segunda lê do cache e que o custo bate com `precos_llm.yaml` —
+  custa menos de US$ 0,01 por execução.
 - `test_pipeline_fotos_poc.py` (task 07): processa fotos reais de `poc/fotos_input/`, mas grava
   localmente (`ArmazenamentoImagensDiretorio`) — não toca o R2.

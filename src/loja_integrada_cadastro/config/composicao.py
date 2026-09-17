@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import anthropic
+
 from loja_integrada_cadastro.config.configuracao import Configuracao
 from loja_integrada_cadastro.infra.armazenamento_imagens_r2 import ArmazenamentoImagensR2
 from loja_integrada_cadastro.infra.carregador_recursos import CarregadorRecursos
 from loja_integrada_cadastro.infra.catalogo_fotos_diretorio import CatalogoFotosDiretorio
+from loja_integrada_cadastro.infra.cliente_llm_anthropic import ClienteLlmAnthropic
 from loja_integrada_cadastro.infra.escritor_planilha_saida_openpyxl import (
     EscritorPlanilhaSaidaOpenpyxl,
 )
@@ -16,15 +19,21 @@ from loja_integrada_cadastro.infra.leitor_planilha_entrada_openpyxl import (
 )
 from loja_integrada_cadastro.infra.processador_imagem_pillow import ProcessadorImagemPillow
 from loja_integrada_cadastro.infra.repositorio_estado_lote_json import RepositorioEstadoLoteJson
+from loja_integrada_cadastro.infra.repositorio_prompts_jinja import RepositorioPromptsJinja
 from loja_integrada_cadastro.models.padroes_fisicos import PadroesFisicos
 from loja_integrada_cadastro.services.gerador_relatorio import GeradorRelatorio
 from loja_integrada_cadastro.services.montador_planilha import MontadorPlanilha
 from loja_integrada_cadastro.services.pipeline_fotos import PipelineFotos
 from loja_integrada_cadastro.services.politica_reexecucao import PoliticaReexecucao
+from loja_integrada_cadastro.services.ports.cliente_llm import ClienteLlm
 from loja_integrada_cadastro.services.ports.gerador_textos import GeradorTextos
 from loja_integrada_cadastro.services.ports.leitor_planilha_entrada import LeitorPlanilhaEntrada
+from loja_integrada_cadastro.services.ports.repositorio_prompts import RepositorioPrompts
 from loja_integrada_cadastro.services.processador_lote import ProcessarLote
 from loja_integrada_cadastro.services.validador_entrada import ValidadorEntrada
+
+_LLM_MAX_RETRIES = 3
+_LLM_TIMEOUT_SEGUNDOS = 120.0
 
 
 def montar_gerador_modelo_entrada() -> GeradorModeloEntrada:
@@ -59,6 +68,26 @@ def montar_gerador_textos(configuracao: Configuracao) -> GeradorTextos:
     """
     dados_mestre = CarregadorRecursos().dados_mestre()
     return GeradorTextosDummy(dados_mestre)
+
+
+def montar_cliente_llm(configuracao: Configuracao) -> ClienteLlm:
+    """Composition root do conector Anthropic: uma instância do SDK por execução (§6.3).
+
+    Retries de 429/5xx/rede ficam no SDK (`max_retries=3`); o timeout é generoso porque as
+    chamadas usam adaptive thinking. Ainda não é chamado por `montar_processador_lote` — a
+    task 16 liga os agentes ao pipeline.
+    """
+    cliente = anthropic.Anthropic(
+        api_key=configuracao.exigir_anthropic(),
+        max_retries=_LLM_MAX_RETRIES,
+        timeout=_LLM_TIMEOUT_SEGUNDOS,
+    )
+    return ClienteLlmAnthropic(cliente, CarregadorRecursos().precos_llm())
+
+
+def montar_repositorio_prompts() -> RepositorioPrompts:
+    """Composition root do repositório de prompts (templates de `recursos/prompts/`)."""
+    return RepositorioPromptsJinja()
 
 
 def montar_montador_planilha(configuracao: Configuracao) -> MontadorPlanilha:
