@@ -228,3 +228,4 @@ docs/brutos/
 
 # Workspaces de lotes processados (estado, fotos comprimidas, planilhas geradas)
 lotes/
+fotos/

@@ -46,7 +46,6 @@ def _estado_pronto(sku_pai: str) -> EstadoProduto:
     estado = EstadoProduto.registrar_validacao(sku_pai, produto, "hash", _APROVADO)
     foto_selecionada = FotoProduto(
         sku_pai=sku_pai,
-        cor="Beige",
         ordem=1,
         arquivo_origem=Path("a.jpg"),
         nome="foto-1.jpg",
@@ -56,7 +55,6 @@ def _estado_pronto(sku_pai: str) -> EstadoProduto:
     )
     foto_nao_usada = FotoProduto(
         sku_pai=sku_pai,
-        cor="Beige",
         ordem=2,
         arquivo_origem=Path("b.jpg"),
         nome="foto-2.jpg",

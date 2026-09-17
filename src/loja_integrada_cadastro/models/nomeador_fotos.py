@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from itertools import islice, zip_longest
-
 from loja_integrada_cadastro.models.foto_produto import FotoProduto
 from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
 from loja_integrada_cadastro.models.slug import slugificar
@@ -13,18 +11,20 @@ MAX_IMAGENS_PAI = 5
 
 
 class NomeadorFotos:
-    """Nome de arquivo determinístico e estável entre reexecuções (`docs/ARQUITETURA.md` §5.2)."""
+    """Nome de arquivo determinístico e estável entre reexecuções (`docs/ARQUITETURA.md` §5.2).
+
+    Fotos não têm cor (valem para o produto inteiro), então o nome não carrega esse segmento.
+    """
 
     @staticmethod
-    def nomear(produto: ProdutoEntrada, cor: str, ordem: int) -> str:
+    def nomear(produto: ProdutoEntrada, ordem: int) -> str:
         marca = slugificar(produto.marca)
         tipo = slugificar(produto.tipo_peca)
         nome_fornecedor = _sem_prefixo_duplicado(slugificar(produto.nome_fornecedor), tipo)
-        cor_slug = slugificar(cor)
 
         base = "-".join(parte for parte in (marca, tipo, nome_fornecedor) if parte)
         base = base[:_TAMANHO_MAX_NOME].rstrip("-")
-        return f"{base}-{cor_slug}-{ordem}.jpg"
+        return f"{base}-{ordem}.jpg"
 
 
 def _sem_prefixo_duplicado(nome_fornecedor_slug: str, tipo_slug: str) -> str:
@@ -42,18 +42,8 @@ def _sem_prefixo_duplicado(nome_fornecedor_slug: str, tipo_slug: str) -> str:
 
 
 class SeletorImagensPai:
-    """Escolhe até `MAX_IMAGENS_PAI` fotos para a imagem do pai, round-robin por cor (§5.3)."""
+    """Escolhe até `MAX_IMAGENS_PAI` fotos para a imagem do pai (§5.3): as primeiras, em ordem."""
 
     @staticmethod
     def selecionar(fotos: list[FotoProduto]) -> list[FotoProduto]:
-        por_cor: dict[str, list[FotoProduto]] = {}
-        for foto in fotos:
-            por_cor.setdefault(foto.cor, []).append(foto)
-        for lista in por_cor.values():
-            lista.sort(key=lambda foto: foto.ordem)
-
-        # zip_longest intercala uma lista por cor: primeiro a `-1` de cada cor, depois a `-2`...
-        intercaladas = (
-            foto for rodada in zip_longest(*por_cor.values()) for foto in rodada if foto is not None
-        )
-        return list(islice(intercaladas, MAX_IMAGENS_PAI))
+        return sorted(fotos, key=lambda foto: foto.ordem)[:MAX_IMAGENS_PAI]

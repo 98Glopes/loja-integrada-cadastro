@@ -156,6 +156,30 @@ def test_colecao_vazia_nao_gera_erro_e_fica_none(tmp_path: Path) -> None:
     assert produtos[0].colecao is None
 
 
+def test_linha_mais_curta_que_o_cabecalho_trata_colunas_finais_como_vazias(
+    tmp_path: Path,
+) -> None:
+    """Reproduz o comportamento real do Excel/Sheets: quando as últimas colunas de uma linha
+    nunca foram digitadas, o arquivo não guarda célula nenhuma ali e `openpyxl` (modo
+    `read_only`) devolve uma tupla mais curta que a do cabeçalho para aquela linha — não deve
+    estourar `IndexError`, só tratar a coluna faltando como célula vazia.
+    """
+    cabecalho = (*[c for c in COLUNAS_PLANILHA_ENTRADA if c != "colecao"], "colecao")
+    workbook = Workbook()
+    aba = workbook.active
+    assert aba is not None
+    aba.append(list(cabecalho))
+    linha_completa = _linha_produto()
+    valores_sem_colecao = [linha_completa[coluna] for coluna in cabecalho if coluna != "colecao"]
+    aba.append(valores_sem_colecao)  # linha fisicamente sem a última célula (colecao)
+    caminho = tmp_path / "planilha.xlsx"
+    workbook.save(caminho)
+
+    produtos = LeitorPlanilhaEntradaOpenpyxl().ler(caminho)
+
+    assert produtos[0].colecao is None
+
+
 def test_coluna_obrigatoria_faltando_leva_erro_antes_de_processar_linhas(tmp_path: Path) -> None:
     cabecalho_sem_gtin = tuple(coluna for coluna in COLUNAS_PLANILHA_ENTRADA if coluna != "gtin")
     caminho = _planilha(tmp_path, [_linha_produto()], cabecalho=cabecalho_sem_gtin)

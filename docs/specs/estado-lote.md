@@ -223,3 +223,9 @@ a etapa por onde retomar (tabela de casos no teste parametrizado); `pronto` sem 
   a partir de um produto já `pronto` e o retomar natural de `reprovado-qa` — lacuna do grafo da
   task 06 exposta ao implementar a orquestração real (ver "Desvios e decisões" em
   `docs/specs/tasks/11-processar-lote-relatorio.md`).
+- 2026-09-17 (fix ad-hoc, branch `fix/fix-validation`, sem task numerada — ADR-009 em
+  `ARQUITETURA.md`): `FotoProduto` perde o campo `cor` (foto passa a valer para o produto
+  inteiro, não por variação); `_foto_para_dict`/`_foto_de_dict` em
+  `infra/repositorio_estado_lote_json.py` atualizados. Estado salvo em disco por execuções
+  anteriores ao ADR-009 com `fotos` preenchido fica incompatível (`ErroEstadoLote` ao carregar)
+  — reprocessar apagando o `estado/<sku>.json` correspondente resolve.

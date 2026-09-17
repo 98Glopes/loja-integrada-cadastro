@@ -25,16 +25,13 @@ FOTOS_INPUT = RAIZ / "poc" / "fotos_input"
 
 
 class _CatalogoFotosPoc:
-    """Expõe `poc/fotos_input/` como uma única cor, para o critério de aceite da task 07."""
+    """Expõe `poc/fotos_input/` direto, para o critério de aceite da task 07."""
 
     def __init__(self, arquivos: list[Path]) -> None:
         self._arquivos = arquivos
 
-    def listar(self, sku_pai: str) -> dict[str, list[Path]]:
-        return {"Beige": self._arquivos}
-
-    def cores_disponiveis(self, sku_pai: str) -> list[str]:
-        return ["Beige"]
+    def listar(self, sku_pai: str) -> list[Path]:
+        return self._arquivos
 
 
 def _produto() -> ProdutoEntrada:

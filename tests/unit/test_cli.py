@@ -43,9 +43,9 @@ def _linha_produto(**sobrescritas: object) -> dict[str, object]:
     return base
 
 
-def _pasta_de_fotos(tmp_path: Path, sku_pai: str = "3254002", cor: str = "Beige") -> Path:
+def _pasta_de_fotos(tmp_path: Path, sku_pai: str = "3254002") -> Path:
     raiz = tmp_path / "fotos"
-    pasta = raiz / sku_pai / cor
+    pasta = raiz / sku_pai
     pasta.mkdir(parents=True)
     (pasta / "foto-1.jpg").write_bytes(b"fake")
     return raiz
@@ -116,7 +116,7 @@ def test_validar_retorna_1_e_lista_problema_de_cor_invalida(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     planilha = _planilha(tmp_path, [_linha_produto(cor="Amarelo Fluorescente")])
-    fotos = _pasta_de_fotos(tmp_path, cor="Amarelo Fluorescente")
+    fotos = _pasta_de_fotos(tmp_path)
 
     codigo = AplicacaoCli().executar(
         ["validar", "--planilha", str(planilha), "--fotos", str(fotos)]

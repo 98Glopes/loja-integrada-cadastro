@@ -168,7 +168,6 @@ def _produto_entrada_de_dict(dados: dict[str, Any]) -> ProdutoEntrada:
 def _foto_para_dict(foto: FotoProduto) -> dict[str, Any]:
     return {
         "sku_pai": foto.sku_pai,
-        "cor": foto.cor,
         "ordem": foto.ordem,
         "arquivo_origem": str(foto.arquivo_origem),
         "nome": foto.nome,
@@ -181,7 +180,6 @@ def _foto_para_dict(foto: FotoProduto) -> dict[str, Any]:
 def _foto_de_dict(dados: dict[str, Any]) -> FotoProduto:
     return FotoProduto(
         sku_pai=dados["sku_pai"],
-        cor=dados["cor"],
         ordem=dados["ordem"],
         arquivo_origem=Path(dados["arquivo_origem"]),
         nome=dados["nome"],

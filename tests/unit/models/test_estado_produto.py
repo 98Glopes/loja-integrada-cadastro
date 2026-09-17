@@ -46,12 +46,11 @@ def _validado() -> EstadoProduto:
     return EstadoProduto.registrar_validacao("3254002", _entrada(), "hash-1", _APROVADO)
 
 
-def _foto(cor: str = "Beige", ordem: int = 1, nome: str = "foto-1.jpg") -> FotoProduto:
+def _foto(ordem: int = 1, nome: str = "foto-1.jpg") -> FotoProduto:
     return FotoProduto(
         sku_pai="3254002",
-        cor=cor,
         ordem=ordem,
-        arquivo_origem=Path(f"fotos/3254002/{cor}/{nome}"),
+        arquivo_origem=Path(f"fotos/3254002/{nome}"),
         nome=nome,
         chave=f"produtos/3254002/{nome}",
         url="url-1",
