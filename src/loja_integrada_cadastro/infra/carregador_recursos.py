@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+from decimal import Decimal
 from importlib import resources
 from typing import Any
 
@@ -7,6 +9,8 @@ import yaml
 
 from loja_integrada_cadastro.models.dados_mestre import DadosMestre
 from loja_integrada_cadastro.models.exceptions.erro_recursos import ErroRecursos
+from loja_integrada_cadastro.models.preco_modelo_llm import PrecoModeloLlm
+from loja_integrada_cadastro.models.tabela_precos_llm import ARQUIVO_PRECOS_LLM, TabelaPrecosLlm
 
 _PACOTE_RECURSOS = "loja_integrada_cadastro.recursos"
 _ARQUIVO_DADOS_MESTRE = "dados_mestre.yaml"
@@ -28,12 +32,17 @@ class CarregadorRecursos:
 
     def dados_mestre(self) -> DadosMestre:
         """Lê e valida `recursos/dados_mestre.yaml`, montando o dataclass `DadosMestre`."""
-        texto = self.texto(_ARQUIVO_DADOS_MESTRE)
+        return montar_dados_mestre(self._yaml(_ARQUIVO_DADOS_MESTRE))
+
+    def precos_llm(self) -> TabelaPrecosLlm:
+        """Lê e valida `recursos/precos_llm.yaml`, montando `TabelaPrecosLlm`."""
+        return montar_tabela_precos_llm(self._yaml(ARQUIVO_PRECOS_LLM))
+
+    def _yaml(self, nome: str) -> object:
         try:
-            bruto = yaml.safe_load(texto)
+            return yaml.safe_load(self.texto(nome))
         except yaml.YAMLError as erro:
-            raise ErroRecursos(_ARQUIVO_DADOS_MESTRE, f"YAML malformado: {erro}") from erro
-        return montar_dados_mestre(bruto)
+            raise ErroRecursos(nome, f"YAML malformado: {erro}") from erro
 
 
 def montar_dados_mestre(bruto: object) -> DadosMestre:
@@ -73,6 +82,45 @@ def montar_dados_mestre(bruto: object) -> DadosMestre:
         tamanhos=tamanhos,
         categorias_referencia=categorias_referencia,
     )
+
+
+def montar_tabela_precos_llm(bruto: object) -> TabelaPrecosLlm:
+    """Valida o dict de `precos_llm.yaml` e monta `TabelaPrecosLlm` (isolada de I/O)."""
+    if not isinstance(bruto, dict):
+        raise ErroRecursos(ARQUIVO_PRECOS_LLM, "conteúdo não é um mapeamento YAML válido")
+    data_referencia = bruto.get("data_referencia")
+    if not isinstance(data_referencia, date):
+        raise ErroRecursos(
+            ARQUIVO_PRECOS_LLM, "campo obrigatório 'data_referencia' ausente ou inválido"
+        )
+    modelos = bruto.get("modelos")
+    if not isinstance(modelos, dict) or not modelos:
+        raise ErroRecursos(ARQUIVO_PRECOS_LLM, "seção obrigatória ausente ou vazia: 'modelos'")
+    precos = {
+        str(modelo): _preco_modelo_de(str(modelo), precos_brutos)
+        for modelo, precos_brutos in modelos.items()
+    }
+    return TabelaPrecosLlm(precos=precos, data_referencia=data_referencia)
+
+
+def _preco_modelo_de(modelo: str, precos_brutos: object) -> PrecoModeloLlm:
+    if not isinstance(precos_brutos, dict):
+        raise ErroRecursos(ARQUIVO_PRECOS_LLM, f"modelo '{modelo}' sem mapeamento de preços")
+    return PrecoModeloLlm(
+        entrada=_preco_de(modelo, precos_brutos, "entrada"),
+        saida=_preco_de(modelo, precos_brutos, "saida"),
+        cache_leitura=_preco_de(modelo, precos_brutos, "cache_leitura"),
+        cache_escrita=_preco_de(modelo, precos_brutos, "cache_escrita"),
+    )
+
+
+def _preco_de(modelo: str, precos_brutos: dict[str, Any], chave: str) -> Decimal:
+    valor = precos_brutos.get(chave)
+    if isinstance(valor, bool) or not isinstance(valor, int | float):
+        raise ErroRecursos(
+            ARQUIVO_PRECOS_LLM, f"preço '{chave}' do modelo '{modelo}' ausente ou não numérico"
+        )
+    return Decimal(str(valor))
 
 
 def _exigir_secao[T](bruto: dict[str, Any], chave: str, tipo: type[T]) -> T:

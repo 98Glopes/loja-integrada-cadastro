@@ -23,7 +23,7 @@ branco.
 | `estado-lote` | `models/estado_produto.py`, `status_produto.py`, port `RepositorioEstadoLote`, implementação JSON, política de reexecução | 06 | [spec](estado-lote.md) |
 | `fotos` | `models/slug.py`, `foto_produto.py`, `nomeador_fotos.py`, port `ProcessadorImagem` (Pillow), `services/pipeline_fotos.py` | 07 | [spec](fotos.md) |
 | `armazenamento-r2` | port `ArmazenamentoImagens`, `infra/armazenamento_imagens_r2.py` (+ diretório) | 07, 08 | [spec](armazenamento-r2.md) |
-| `llm-cliente-prompts` | ports `ClienteLlm` e `RepositorioPrompts`, `infra/cliente_llm_anthropic.py`, `esquemas_llm.py`, `repositorio_prompts_jinja.py`, `recursos/precos_llm.yaml` | 12 | — |
+| `llm-cliente-prompts` | ports `ClienteLlm` e `RepositorioPrompts`, models `PedidoLlm`/`RespostaLlm`/`TabelaPrecosLlm`…, `infra/cliente_llm_anthropic.py`, `repositorio_prompts_jinja.py`, `recursos/precos_llm.yaml` | 12 | [spec](llm-cliente-prompts.md) |
 | `geracao-textos` | `models/textos_produto.py`, port `GeradorTextos`, `infra/gerador_textos_dummy.py` (provisório, sai na task 16) | 09 | [spec](geracao-textos.md) |
 | `agentes-textos` | `recursos/{loja,copy,seo,qa}.md`, `recursos/marcas/`, `recursos/prompts/*.j2`, `models/regras_texto.py`, agentes Copywriter/SEO/QA, `services/gerador_textos_ia.py` | 13, 14, 15, 16 | — |
 | `planilha-saida` | `models/layout_planilha_loja_integrada.py`, `linha_planilha.py`, `services/montador_planilha.py`, port `EscritorPlanilhaSaida` | 10 | [spec](planilha-saida.md) |

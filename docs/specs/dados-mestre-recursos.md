@@ -2,7 +2,7 @@
 
 **Responsabilidade:** versionar e servir a lista mestre de marcas, cores, tamanhos e categorias
 de referência do catálogo, extraída da exportação real da loja, para o validador e os prompts.
-**Estado:** implementado pela task 02 · última atualização 2026-09-13 (task 02)
+**Estado:** implementado pela task 02 · última atualização 2026-09-16 (task 12)
 
 ## Arquivos
 
@@ -53,6 +53,8 @@ Variáveis de ambiente: nenhuma (recurso é lido do pacote instalado, não confi
 - `CarregadorRecursos.dados_mestre()` lê `dados_mestre.yaml`, traduz `yaml.YAMLError` em
   `ErroRecursos` e delega a validação/montagem a `montar_dados_mestre` (função isolada de I/O,
   testável com um `dict` puro).
+- `CarregadorRecursos.precos_llm()` faz o mesmo para `precos_llm.yaml` via
+  `montar_tabela_precos_llm` (task 12) — contrato e regras na spec `llm-cliente-prompts`.
 - `montar_dados_mestre` exige as seções `marcas.canonicas`, `marcas.proibidas`, `cores`,
   `tamanhos`, `categorias_referencia`; qualquer uma ausente ou com tipo errado (ex.: item de
   `tamanhos` que não é string) levanta `ErroRecursos` com mensagem citando a seção — nunca deixa
@@ -97,3 +99,5 @@ Variáveis de ambiente: nenhuma (recurso é lido do pacote instalado, não confi
 
 - Task 02 (2026-09-13): criação do módulo — `DadosMestre`, `ErroRecursos`,
   `CarregadorRecursos`, `recursos/dados_mestre.yaml` e `scripts/extrair_dados_mestre.py`.
+- Task 12 (2026-09-16): `CarregadorRecursos.precos_llm()` + `montar_tabela_precos_llm()`;
+  leitura de YAML extraída para `_yaml(nome)` compartilhado.

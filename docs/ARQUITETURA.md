@@ -287,19 +287,21 @@ TextosProduto` (task 09). A topologia abaixo é a implementação de IA desse po
 ### 6.3 Boas práticas da API Anthropic aplicadas
 
 Referência: skill `claude-api` (documentação oficial) — os pontos abaixo são os que o conector
-`ClienteLlmAnthropic` implementa.
+`ClienteLlmAnthropic` implementa. ✅ Implementado (task 12) — spec viva em
+`docs/specs/llm-cliente-prompts.md`.
 
 | Prática | Como entra no projeto |
 |---|---|
 | SDK oficial `anthropic` (Python), cliente síncrono, `max_retries=3`, timeout explícito | Uma instância por execução, injetada pelo composition root. |
-| **Saída estruturada** com `client.messages.parse(output_format=<pydantic>)` | Cada agente tem um schema pydantic (em `infra/`), convertido para o dataclass de domínio. Elimina parsing de JSON em texto livre. Sem prefill (removido nos modelos atuais). |
+| **Saída estruturada** com `client.beta.messages.parse(output_format=<dataclass>)` | O `esquema` é o próprio dataclass de domínio: o SDK gera o JSON Schema e valida via `pydantic.TypeAdapter`, devolvendo a instância (sem modelo pydantic paralelo — task 12). Elimina parsing de JSON em texto livre. Sem prefill (removido nos modelos atuais). |
 | **Prompt caching** com `cache_control` no system prompt | System prompt = `[regras fixas da loja/formato] + [perfil da marca]`, ambos estáveis → breakpoint no último bloco de system. Dados do produto só no turno de usuário. Produtos do lote são **ordenados por marca** para maximizar cache hits dentro do TTL de 5 min. Sem timestamps/UUIDs no prefixo. |
 | **Adaptive thinking + `effort`** | Copywriter `high`, SEO `medium`, QA `medium` (configuráveis). `temperature/top_p` não existem mais nos modelos atuais — não usar. |
 | `max_tokens` com folga (4096 para geradores, 2048 para QA) | Textos são curtos; folga evita truncamento sem custo extra. |
 | Dados da planilha como **dados, não instruções** | Conteúdo da dona da loja entra em blocos `<produto>…</produto>` no turno de usuário; system prompt instrui a tratar como dados (defesa contra injeção acidental). |
 | Tratamento de erros por classe (`RateLimitError` → espera `retry-after`; `APIStatusError ≥ 500` → retry; `BadRequestError` → falha do produto) e tradução para `ErroGeracaoTexto` | O service nunca vê exceções do SDK. |
-| `stop_reason` conferido (`max_tokens` → retry com limite maior; `refusal` → falha registrada) | — |
-| `usage` (input, output, cache read/write) registrado por chamada | Vai para o estado do produto e para o custo estimado no relatório. `request_id` guardado para suporte. |
+| `stop_reason` conferido (`max_tokens` → uma nova tentativa com o dobro; `refusal` → `ErroGeracaoTexto` não retentável) | — |
+| **`fallbacks="default"`** (beta `server-side-fallback-2026-07-01`) | Se o modelo pedido recusar por política, a API reexecuta no modelo de fallback recomendado e devolve a resposta dele; `RespostaLlm.modelo` registra quem respondeu e o custo usa a tabela desse modelo. `refusal` só chega ao conector se a cadeia inteira recusar (ADR-010). |
+| `usage` (input, output, cache read/write) registrado por chamada | `RespostaLlm.uso` com custo em `Decimal` pela tabela `recursos/precos_llm.yaml` (modelo sem preço falha **antes** da chamada). Vai para o estado do produto e para o relatório (task 16). `request_id` guardado para suporte. `RespostaLlm.texto` guarda o JSON bruto para o retry com histórico. |
 | Execução sequencial | Uma chamada por vez; rate limit tratado pelo backoff do SDK. Produtos ordenados por marca para maximizar cache hits. |
 | Evolução: Message Batches (−50%) | Não usado agora: o loop de QA exigiria várias rodadas assíncronas. Se o volume por lote passar de centenas, a etapa Copywriter/SEO pode virar batch mantendo o QA síncrono. |
 
@@ -317,13 +319,16 @@ src/loja_integrada_cadastro/recursos/
     nina-go.md  kyly.md  lemon.md  _generico.md
   dados_mestre.yaml       marcas (canônica + aliases aceitos), cores da grade, tamanhos,
                           categorias conhecidas (só referência)
+  precos_llm.yaml         preços por modelo (USD/MTok, com data de referência) ✅ task 12
   prompts/
-    copywriter.j2  seo.j2  qa.j2   (system e user separados por bloco)
+    copywriter.j2  seo.j2  qa.j2   (blocos sistema_fixo / sistema_marca / usuario) 🔲 task 13
 ```
 
 Markdown é carregado como texto (prosa para o modelo); YAML é carregado e validado num
 dataclass `DadosMestre` (usado pelo validador, não só pelos prompts). Templates Jinja2
-recebem `produto`, `marca`, `loja`, `regras` e, no SEO/QA, os textos já gerados. Os arquivos
+(`RepositorioPromptsJinja`, task 12: `autoescape` off, `StrictUndefined`, cada bloco renderizado
+separado para o cache) recebem `produto`, `marca`, `loja`, `regras` e, no SEO/QA, os textos já
+gerados. Os arquivos
 são recursos do pacote (`importlib.resources`), então o sistema funciona instalado, sem depender
 do repositório.
 
@@ -456,6 +461,10 @@ src/loja_integrada_cadastro/
     ✅ foto_produto.py               FotoProduto (frozen: sku_pai, ordem, arquivo_origem, nome, chave, url, bytes) (task 07; perdeu `cor` no ADR-009)
     ✅ textos_produto.py             TextosProduto (4 campos) + como_mapa() (task 09)
     🔲 veredicto_qa.py               VeredictoQa + ProblemaQa
+    ✅ mensagem_llm.py / pedido_llm.py   MensagemLlm(papel, conteudo); PedidoLlm(blocos_sistema, mensagens, modelo, effort: EffortLlm, max_tokens) (task 12)
+    ✅ uso_llm.py / resposta_llm.py      UsoLlm (4 contadores + custo Decimal); RespostaLlm[T](saida, texto, uso, modelo, request_id, stop_reason) (task 12)
+    ✅ prompt_renderizado.py          PromptRenderizado(blocos_sistema, usuario) (task 12)
+    ✅ preco_modelo_llm.py / tabela_precos_llm.py   PrecoModeloLlm.custo(...); TabelaPrecosLlm.exigir(modelo) (task 12)
     ✅ estado_produto.py             EstadoProduto (fábrica registrar_validacao + 8 métodos de intenção; `fotos: tuple[FotoProduto, ...]` desde a task 07) e status_produto.py: StatusProduto (Enum) (task 06)
     ✅ linha_planilha.py             LinhaPlanilha (frozen: tipo, valores: Mapping[str, object]) (task 10)
     ✅ layout_planilha_loja_integrada.py   COLUNAS_PLANILHA_SAIDA (54), COLUNAS_PREENCHIDAS_KMILAA (task 10)
@@ -474,7 +483,9 @@ src/loja_integrada_cadastro/
       ✅ erro_processamento_imagem.py  ErroProcessamentoImagem(origem, motivo) (task 07)
       ✅ erro_publicacao_imagem.py     ErroPublicacaoImagem(chave_ou_url, motivo) (task 08)
       ✅ erro_planilha_saida.py        ErroPlanilhaSaida(motivo) (task 10)
-      🔲                             ErroValidacaoEntrada, ErroGeracaoTexto, ErroConsultaLoja
+      ✅ erro_geracao_texto.py       ErroGeracaoTexto(motivo, retentavel=False) (task 12)
+      ✅ erro_prompt.py              ErroPrompt(nome, motivo) (task 12)
+      🔲                             ErroValidacaoEntrada, ErroConsultaLoja
   🔲 services/
     🔲 ports/
       ✅ leitor_planilha_entrada.py  LeitorPlanilhaEntrada.ler(caminho) -> list[ProdutoEntrada] (task 04)
@@ -482,8 +493,8 @@ src/loja_integrada_cadastro/
       ✅ processador_imagem.py       ProcessadorImagem.preparar(origem: Path) -> bytes (JPEG final) (task 07)
       ✅ armazenamento_imagens.py    ArmazenamentoImagens.publicar(chave, dados) -> url; existe(url) -> bool (task 07; contrato confirmado sem alteração na task 08 — ver ADR-006)
       ✅ gerador_textos.py           GeradorTextos.gerar(produto, estado) -> TextosProduto (task 09)
-      🔲 cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, schema: type[T]) -> RespostaLlm[T]
-      🔲 repositorio_prompts.py      RepositorioPrompts.renderizar(nome, contexto) -> PromptRenderizado
+      ✅ cliente_llm.py              ClienteLlm.gerar(pedido: PedidoLlm, esquema: type[T]) -> RespostaLlm[T] (task 12)
+      ✅ repositorio_prompts.py      RepositorioPrompts.renderizar(nome, contexto) -> PromptRenderizado (task 12)
       ✅ repositorio_estado_lote.py  RepositorioEstadoLote.carregar/salvar(EstadoProduto), listar(), copiar_planilha_entrada(), salvar_relatorio(Relatorio), diretorio_lote() (task 06; 3 últimos task 11)
       ✅ escritor_planilha_saida.py  EscritorPlanilhaSaida.escrever(linhas, destino) (task 10)
       🔲 consulta_loja.py            ConsultaLoja.buscar(termo) -> list[url]; pagina(url) -> PaginaProduto
@@ -506,18 +517,17 @@ src/loja_integrada_cadastro/
     ✅ armazenamento_imagens_diretorio.py       ArmazenamentoImagensDiretorio(raiz): grava em fotos-processadas/, devolve URL file:// (task 07)
     ✅ armazenamento_imagens_r2.py            ArmazenamentoImagensR2(bucket, account_id, access_key_id, secret_access_key, url_publica): boto3 (S3-compatible), existe() com httpx.head real (task 08)
     ✅ gerador_textos_dummy.py                GeradorTextosDummy: textos determinísticos dentro dos limites de §6.1 — provisório (task 09), removido na task 16 (ADR-007)
-    🔲 cliente_llm_anthropic.py               SDK anthropic: parse(), caching, usage, erros → domínio
-    🔲 esquemas_llm.py                        modelos pydantic de saída estruturada (por agente)
-    🔲 repositorio_prompts_jinja.py           Jinja2 + recursos do pacote
-    ✅ carregador_recursos.py                 lê recursos/ (md, yaml) via importlib.resources (task 02)
+    ✅ cliente_llm_anthropic.py               ClienteLlmAnthropic(client, tabela_precos): beta parse() com dataclass, cache no último bloco de system, fallbacks="default", usage/custo, erros → ErroGeracaoTexto (task 12)
+    ✅ repositorio_prompts_jinja.py           RepositorioPromptsJinja(loader=None): PackageLoader recursos/prompts, blocos separados (task 12; `esquemas_llm.py` previsto não existe — o SDK aceita o dataclass direto)
+    ✅ carregador_recursos.py                 lê recursos/ (md, yaml) via importlib.resources (task 02); precos_llm() (task 12)
     ✅ repositorio_estado_lote_json.py         RepositorioEstadoLoteJson (task 06)
     ✅ escritor_planilha_saida_openpyxl.py     EscritorPlanilhaSaidaOpenpyxl: aba única Sheet1, erro acima de 9.997 linhas (task 10)
     🔲 consulta_loja_http.py                  httpx + selectolax
   config/
     ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
     ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
-    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); ✅ montar_gerador_textos() (task 09; troca para IA na 16); ✅ montar_montador_planilha() (task 10); ✅ montar_pipeline_fotos(), montar_processador_lote() (task 11); 🔲 montar_verificador()
-  🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; demais arquivos pendentes)
+    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); ✅ montar_gerador_textos() (task 09; troca para IA na 16); ✅ montar_montador_planilha() (task 10); ✅ montar_pipeline_fotos(), montar_processador_lote() (task 11); ✅ montar_cliente_llm(configuracao), montar_repositorio_prompts() (task 12, ainda fora do wiring de `processar`); 🔲 montar_verificador()
+  🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; precos_llm.yaml + prompts/README.md ✅ task 12; demais arquivos pendentes)
   ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar (task 05) | processar (task 11) | verificar (task 01; "não implementado", código 2)
 ```
 
@@ -537,8 +547,9 @@ Regras que as tasks devem respeitar:
 Dependências instaladas: `openpyxl`, `python-dotenv` (task 01); `pyyaml` (task 02, com stub
 `types-PyYAML`); `pillow`, `pillow-heif` (task 07 — wheels pré-compiladas confirmadas para
 `cp314-win_amd64`, sem toolchain de compilação necessária no Windows); `boto3`, `httpx` (task 08,
-com stub `boto3-stubs[s3]` para mypy). A adicionar quando a task correspondente chegar:
-`anthropic`, `pydantic`, `jinja2`, `selectolax`.
+com stub `boto3-stubs[s3]` para mypy); `anthropic>=1.6` (SDK 1.x sobre `httpx2`), `pydantic>=2`,
+`jinja2>=3.1` (task 12, todos com `py.typed`). A adicionar quando a task correspondente chegar:
+`selectolax`.
 
 Convenção de lint: exceções de domínio chamam-se `Erro<Nome>`; a regra ruff `N818` (sufixo
 `Error`) está desligada no `pyproject.toml` por isso.
@@ -581,7 +592,8 @@ consumir `Configuracao`).
 - `tests/unit/models/test_layout_planilha…` confere as 54 colunas; se
   `docs/brutos/produtos-….xlsx` existir localmente, compara com a exportação real (senão, pula).
 - `tests/integration/` (`@pytest.mark.integration`, desligados por padrão): R2 real (bucket de
-  teste ou prefixo `testes/`), Anthropic real (1 produto), site público. Rodados manualmente.
+  teste ou prefixo `testes/`), Anthropic real (task 12: duas chamadas com esquema trivial
+  conferindo cache hit e custo; futuramente 1 produto), site público. Rodados manualmente.
 - **Fixtures**: `tests/fixtures/lote-piloto/` com planilha de 6–8 produtos (≥ 1 marca sem
   perfil, 1 com várias cores × tamanhos, 1 de cor única, 1 de tamanho único, 1 com erro
   proposital de cor, 1 com GTIN inválido) e fotos pequenas.
@@ -632,7 +644,7 @@ própria loja rejeita cor fora da lista, inclusive com caixa diferente.
 | 2 | Categoria precisa existir no painel; só a formatação é validada. | Relatório lista categorias usadas; aviso quando a categoria não está na lista de referência do `dados_mestre.yaml`. |
 | 3 | Busca pública por título pode não localizar a página (slug divergente). | `verificar` tenta slug previsto do título e busca; registra `nao-localizado` sem falhar o lote. |
 | 4 | ~~Falha silenciosa de imagem na importação (POC rodada 1).~~ **Mitigado (task 08):** compressão < 500 KB (task 07) + `HEAD` real na URL logo após publicar, antes de contar a foto (`ArmazenamentoImagensR2.existe`, `PipelineFotos.processar`) — falha aborta o produto (`erro-fotos`). | `verificar` (task 18) ainda vai acusar produto sem imagem pós-importação, como camada adicional. |
-| 5 | Custo de LLM em lotes grandes. | Cache por marca, ordenação por marca, effort por agente, relatório com custo real; Batches como evolução. |
+| 5 | Custo de LLM em lotes grandes. | Cache por marca, ordenação por marca, effort por agente, relatório com custo real; Batches como evolução. **Parcial (task 12):** custo por chamada calculado em `Decimal` pela tabela `precos_llm.yaml` e cache confirmado na API real (~4,5k tokens de system lidos do cache a 0,1×); falta somar no estado/relatório (task 16). |
 | 6 | ~~HEIC no Windows depende de `pillow-heif` (roda binário).~~ **Resolvido (task 07):** wheel pré-compilada `pillow_heif-1.7.0-cp314-cp314-win_amd64` existe e foi testada (`pip install --dry-run` + roundtrip real de encode/decode HEIC no `.venv` do projeto, Python 3.14.6) — nenhum toolchain de compilação necessário. | `ProcessadorImagemPillow` registra `pillow_heif.register_heif_opener()` com `try/except ImportError`: se a lib faltar em outro ambiente, `.heic` falha com `ErroProcessamentoImagem` pedindo JPG/PNG/WEBP (fallback ainda ativo, só não foi necessário aqui). |
 | 7 | Mudança de layout da exportação da loja (nova grade). | **Mitigado (task 10):** `COLUNAS_PLANILHA_SAIDA` versionada + teste opcional (`pytest.skip` sem o arquivo) que já confirmou o layout contra `docs/brutos/produtos-2026-09-10-*.xlsx` e corrigiu 4 nomes de coluna errados na documentação (`grade-tamanho-de-*`). |
 | 8 | Produto reprovado pelo QA fica fora da planilha (decisão confirmada, §6.2). | Relatório destaca reprovados no topo; CLI encerra com código ≠ 0; `--refazer-textos`/`--incluir-reprovados` para resolver. |
@@ -790,3 +802,22 @@ desvio altera uma decisão de arquitetura (não para desvios locais — esses fi
   da câmera podem ir direto pra pasta sem nenhuma organização). Testado com importação real na
   Loja Integrada após a mudança (confirmado pelo usuário).
 - **Task:** nenhuma (fix ad-hoc, branch `fix/fix-validation`, commit `6bb7c76`).
+
+### ADR-010 — `fallbacks="default"` no conector Anthropic: refusal só falha se a cadeia recusar (16/09/2026)
+
+- **Contexto:** §6.3 previa `refusal → falha registrada`. A task 12 pedia avaliar o parâmetro
+  server-side `fallbacks` da API (skill `claude-api`): em vez de devolver a recusa, a API
+  reexecuta a mesma chamada num modelo de fallback escolhido pela Anthropic conforme a
+  categoria da recusa. O SDK 1.6.0 aceita `fallbacks="default"` + `betas=["server-side-
+  fallback-2026-07-01"]` em `client.beta.messages.parse` (não no `messages.parse` estável).
+  Confirmado com o usuário em plan mode.
+- **Decisão:** `ClienteLlmAnthropic` usa o namespace beta com `fallbacks="default"` ligado.
+  `RespostaLlm.modelo` registra o modelo que **respondeu** (`response.model`) e o custo usa a
+  tabela desse modelo. `stop_reason == "refusal"` continua virando `ErroGeracaoTexto(
+  retentavel=False)`, mas agora significa que a cadeia inteira recusou.
+- **Consequência:** menos produtos caem em `reprovado` por recusa de política; em troca, um
+  texto pode ser escrito por outro modelo (ex.: Opus 4.8) sem o operador ter escolhido — o
+  relatório deve mostrar `RespostaLlm.modelo` por produto (task 16) para isso ficar visível.
+  `precos_llm.yaml` precisa conter os alvos de fallback (hoje Opus 4.8); um alvo sem preço
+  faria `gerar` falhar depois de gastar (o `exigir` de entrada só cobre o modelo pedido).
+- **Task:** 12.

@@ -1,0 +1,28 @@
+# Preços da API Anthropic em USD por 1 milhão de tokens, copiados da documentação oficial
+# (tabela da skill `claude-api`, cache de 2026-06-24) em 2026-09-16.
+#
+# cache_leitura = 0,1 × entrada; cache_escrita = 1,25 × entrada (TTL de 5 minutos, o único
+# usado pelo conector). Modelo fora desta tabela faz `ClienteLlmAnthropic.gerar` falhar ANTES
+# da chamada (ErroRecursos): sem preço não há como estimar o custo do lote.
+data_referencia: 2026-09-16
+modelos:
+  claude-opus-5:
+    entrada: 5.00
+    saida: 25.00
+    cache_leitura: 0.50
+    cache_escrita: 6.25
+  claude-opus-4-8:
+    entrada: 5.00
+    saida: 25.00
+    cache_leitura: 0.50
+    cache_escrita: 6.25
+  claude-sonnet-5:
+    entrada: 2.00
+    saida: 10.00
+    cache_leitura: 0.20
+    cache_escrita: 2.50
+  claude-haiku-4-5:
+    entrada: 1.00
+    saida: 5.00
+    cache_leitura: 0.10
+    cache_escrita: 1.25
