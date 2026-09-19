@@ -2,14 +2,14 @@
 
 **Responsabilidade:** versionar e servir a lista mestre de marcas, cores, tamanhos e categorias
 de referência do catálogo, extraída da exportação real da loja, para o validador e os prompts.
-**Estado:** implementado pela task 02 · última atualização 2026-09-16 (task 12)
+**Estado:** implementado pela task 02 · última atualização 2026-09-19 (task 13)
 
 ## Arquivos
 
 | Camada | Arquivo |
 |---|---|
 | models | `models/dados_mestre.py` (`DadosMestre`), `models/exceptions/erro_recursos.py` (`ErroRecursos`) |
-| infra | `infra/carregador_recursos.py` (`CarregadorRecursos`, `montar_dados_mestre`) |
+| infra | `infra/carregador_recursos.py` (`CarregadorRecursos`, `montar_dados_mestre`, `montar_tabela_precos_llm`, `extrair_palavras_proibidas`) |
 | recursos | `recursos/__init__.py`, `recursos/dados_mestre.yaml` |
 | scripts | `scripts/extrair_dados_mestre.py` (ferramenta de dev, fora do pacote) |
 
@@ -38,6 +38,10 @@ class DadosMestre:
 class CarregadorRecursos:
     def texto(self, nome: str) -> str: ...
     def dados_mestre(self) -> DadosMestre: ...
+    def precos_llm(self) -> TabelaPrecosLlm: ...  # task 12, spec llm-cliente-prompts
+    def perfil_marca(self, marca_canonica: str) -> PerfilMarca: ...  # task 13, spec agentes-textos
+    def marcas_com_perfil(self) -> frozenset[str]: ...
+    def palavras_proibidas(self) -> frozenset[str]: ...
 
 
 def montar_dados_mestre(bruto: object) -> DadosMestre: ...
@@ -55,6 +59,10 @@ Variáveis de ambiente: nenhuma (recurso é lido do pacote instalado, não confi
   testável com um `dict` puro).
 - `CarregadorRecursos.precos_llm()` faz o mesmo para `precos_llm.yaml` via
   `montar_tabela_precos_llm` (task 12) — contrato e regras na spec `llm-cliente-prompts`.
+- `perfil_marca`, `marcas_com_perfil` e `palavras_proibidas` (task 13) servem os recursos de
+  conteúdo (`recursos/marcas/*.md`, `seo.md`) — contrato e regras na spec `agentes-textos`.
+  `marcas_com_perfil()` cruza `DadosMestre.marcas_canonicas` com os arquivos de perfil
+  existentes.
 - `montar_dados_mestre` exige as seções `marcas.canonicas`, `marcas.proibidas`, `cores`,
   `tamanhos`, `categorias_referencia`; qualquer uma ausente ou com tipo errado (ex.: item de
   `tamanhos` que não é string) levanta `ErroRecursos` com mensagem citando a seção — nunca deixa
@@ -80,8 +88,9 @@ Variáveis de ambiente: nenhuma (recurso é lido do pacote instalado, não confi
 - `scripts/extrair_dados_mestre.py` nunca cria ou edita a seção `marcas` — é decisão humana
   documentada em `docs/brutos/dados_mestre.md` §2; o script falha (`SystemExit`) se ela não
   existir no YAML de destino.
-- Não versiona perfis de marca em Markdown nem prompts Jinja2 — isso é o módulo
-  `agentes-textos` (task 13).
+- Os perfis de marca e regras de conteúdo em Markdown pertencem ao módulo `agentes-textos`;
+  esta classe só os carrega. Prompts Jinja2 são lidos por `RepositorioPromptsJinja`
+  (`llm-cliente-prompts`), não por aqui.
 
 ## Testes
 
@@ -101,3 +110,5 @@ Variáveis de ambiente: nenhuma (recurso é lido do pacote instalado, não confi
   `CarregadorRecursos`, `recursos/dados_mestre.yaml` e `scripts/extrair_dados_mestre.py`.
 - Task 12 (2026-09-16): `CarregadorRecursos.precos_llm()` + `montar_tabela_precos_llm()`;
   leitura de YAML extraída para `_yaml(nome)` compartilhado.
+- Task 13 (2026-09-19): `perfil_marca()`, `marcas_com_perfil()`, `palavras_proibidas()` e
+  `extrair_palavras_proibidas()`; `_existe`/`_recurso` compartilhados por `texto`.

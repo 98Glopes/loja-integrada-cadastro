@@ -17,7 +17,7 @@ branco.
 | Módulo (`docs/specs/<modulo>.md`) | Cobre (§10 da arquitetura) | Tasks | Spec |
 |---|---|---|---|
 | `configuracao-cli` | `config/configuracao.py`, `config/leitor_ambiente.py`, `cli.py`, `.env.exemplo`, subcomandos | 01, 11, 18 | [spec](configuracao-cli.md) |
-| `dados-mestre-recursos` | `models/dados_mestre.py`, `infra/carregador_recursos.py`, `recursos/dados_mestre.yaml`, `scripts/extrair_dados_mestre.py` | 02 | [spec](dados-mestre-recursos.md) |
+| `dados-mestre-recursos` | `models/dados_mestre.py`, `infra/carregador_recursos.py`, `recursos/dados_mestre.yaml`, `scripts/extrair_dados_mestre.py` | 02, 12, 13 | [spec](dados-mestre-recursos.md) |
 | `planilha-entrada` | `models/produto_entrada.py`, `variacao_entrada.py`, port `LeitorPlanilhaEntrada`, leitor e gerador de modelo openpyxl | 04 | [spec](planilha-entrada.md) |
 | `validacao` | `services/validador_entrada.py`, `models/resultado_validacao.py`, port `CatalogoFotos` e implementação em diretório | 05 | [spec](validacao.md) |
 | `estado-lote` | `models/estado_produto.py`, `status_produto.py`, port `RepositorioEstadoLote`, implementação JSON, política de reexecução | 06 | [spec](estado-lote.md) |
@@ -25,7 +25,7 @@ branco.
 | `armazenamento-r2` | port `ArmazenamentoImagens`, `infra/armazenamento_imagens_r2.py` (+ diretório) | 07, 08 | [spec](armazenamento-r2.md) |
 | `llm-cliente-prompts` | ports `ClienteLlm` e `RepositorioPrompts`, models `PedidoLlm`/`RespostaLlm`/`TabelaPrecosLlm`…, `infra/cliente_llm_anthropic.py`, `repositorio_prompts_jinja.py`, `recursos/precos_llm.yaml` | 12 | [spec](llm-cliente-prompts.md) |
 | `geracao-textos` | `models/textos_produto.py`, port `GeradorTextos`, `infra/gerador_textos_dummy.py` (provisório, sai na task 16) | 09 | [spec](geracao-textos.md) |
-| `agentes-textos` | `recursos/{loja,copy,seo,qa}.md`, `recursos/marcas/`, `recursos/prompts/*.j2`, `models/regras_texto.py`, agentes Copywriter/SEO/QA, `services/gerador_textos_ia.py` | 13, 14, 15, 16 | — |
+| `agentes-textos` | `recursos/{loja,copy,seo,qa}.md`, `recursos/marcas/`, `models/perfil_marca.py`, `recursos/prompts/*.j2`, `models/regras_texto.py`, agentes Copywriter/SEO/QA, `services/gerador_textos_ia.py` | 13, 14, 15, 16 | [spec](agentes-textos.md) |
 | `planilha-saida` | `models/layout_planilha_loja_integrada.py`, `linha_planilha.py`, `services/montador_planilha.py`, port `EscritorPlanilhaSaida` | 10 | [spec](planilha-saida.md) |
 | `processamento-lote-relatorio` | `services/processador_lote.py`, `gerador_relatorio.py`, subcomando `processar` | 11 | [spec](processamento-lote-relatorio.md) |
 | `verificacao-pos-importacao` | port `ConsultaLoja`, `infra/consulta_loja_http.py`, `services/verificador_importacao.py`, subcomando `verificar` | 18 | — |

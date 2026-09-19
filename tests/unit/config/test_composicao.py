@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,8 @@ from loja_integrada_cadastro.infra.leitor_planilha_entrada_openpyxl import (
 )
 from loja_integrada_cadastro.infra.repositorio_prompts_jinja import RepositorioPromptsJinja
 from loja_integrada_cadastro.models.exceptions.erro_configuracao import ErroConfiguracao
+from loja_integrada_cadastro.models.produto_entrada import ProdutoEntrada
+from loja_integrada_cadastro.models.variacao_entrada import VariacaoEntrada
 from loja_integrada_cadastro.services.montador_planilha import MontadorPlanilha
 from loja_integrada_cadastro.services.pipeline_fotos import PipelineFotos
 from loja_integrada_cadastro.services.processador_lote import ProcessarLote
@@ -55,6 +58,29 @@ def test_montar_validador_entrada_devolve_validador_funcional(tmp_path: Path) ->
     validador = montar_validador_entrada(tmp_path)
 
     assert isinstance(validador, ValidadorEntrada)
+
+
+def test_montar_validador_entrada_liga_marcas_com_perfil_dos_recursos(tmp_path: Path) -> None:
+    produto = ProdutoEntrada(
+        sku_pai="3254002",
+        marca="Kiki Xodó",
+        nome_fornecedor="Conjunto Baby",
+        tipo_peca="Conjunto",
+        categoria=("Linha Baby", "Menina", "Conjunto"),
+        composicao="100% algodão",
+        detalhes="Botões na gola",
+        colecao=None,
+        faixa_tamanho="P ao G",
+        variacoes=(
+            VariacaoEntrada(
+                cor="Rosa", tamanho="P", gtin="7891234567895", preco=Decimal("99.90"), estoque=1
+            ),
+        ),
+    )
+
+    _, resultado = montar_validador_entrada(tmp_path).validar([produto])
+
+    assert not any("sem perfil de marca" in aviso.mensagem for aviso in resultado.avisos)
 
 
 def test_montar_gerador_textos_devolve_gerador_dummy() -> None:

@@ -6,10 +6,41 @@ import pytest
 
 from loja_integrada_cadastro.infra.carregador_recursos import (
     CarregadorRecursos,
+    extrair_palavras_proibidas,
     montar_dados_mestre,
     montar_tabela_precos_llm,
 )
 from loja_integrada_cadastro.models.exceptions.erro_recursos import ErroRecursos
+
+MARCAS_CANONICAS = frozenset(
+    {
+        "kiki",
+        "Onda Marinha",
+        "Colorittá",
+        "somnii",
+        "Menina Anjo",
+        "Luc.boo",
+        "Nina Go",
+        "Kyly",
+        "Lemon",
+    }
+)
+RECURSOS_DE_TEXTO = (
+    "loja.md",
+    "copy.md",
+    "seo.md",
+    "qa.md",
+    "marcas/_generico.md",
+    "marcas/kiki.md",
+    "marcas/onda-marinha.md",
+    "marcas/coloritta.md",
+    "marcas/somnii.md",
+    "marcas/menina-anjo.md",
+    "marcas/luc-boo.md",
+    "marcas/nina-go.md",
+    "marcas/kyly.md",
+    "marcas/lemon.md",
+)
 
 
 def _dict_dados_mestre_completo() -> dict[str, Any]:
@@ -79,6 +110,86 @@ def test_montar_dados_mestre_falha_com_tamanho_nao_string() -> None:
 def test_montar_dados_mestre_falha_com_conteudo_nao_mapeamento() -> None:
     with pytest.raises(ErroRecursos):
         montar_dados_mestre(["não é um dict"])
+
+
+# --- recursos de conteúdo (task 13) --------------------------------------------------------
+
+
+@pytest.mark.parametrize("nome", RECURSOS_DE_TEXTO)
+def test_recursos_de_conteudo_carregam_do_pacote_real(nome: str) -> None:
+    conteudo = CarregadorRecursos().texto(nome)
+
+    assert conteudo.startswith("# ")
+    assert len(conteudo.split()) > 50
+
+
+@pytest.mark.parametrize("nome", RECURSOS_DE_TEXTO)
+def test_recursos_de_conteudo_nao_pedem_url_foto_nem_sufixo_da_loja(nome: str) -> None:
+    conteudo = CarregadorRecursos().texto(nome)
+
+    assert "| Kmilaa Modas" not in conteudo
+    assert ".jpg" not in conteudo
+    assert "Foto 1" not in conteudo
+
+
+@pytest.mark.parametrize("marca", ["Menina Anjo", "Kyly"])
+def test_perfil_marca_devolve_perfil_proprio(marca: str) -> None:
+    perfil = CarregadorRecursos().perfil_marca(marca)
+
+    assert perfil.marca == marca
+    assert perfil.generico is False
+    assert perfil.texto.startswith(f"# {marca}")
+    assert "Big Idea" in perfil.texto
+
+
+def test_perfil_marca_inexistente_cai_no_generico_e_sinaliza() -> None:
+    carregador = CarregadorRecursos()
+
+    perfil = carregador.perfil_marca("Marca Nova")
+
+    assert perfil.marca == "Marca Nova"
+    assert perfil.generico is True
+    assert perfil.texto == carregador.texto("marcas/_generico.md")
+
+
+def test_toda_marca_canonica_do_dados_mestre_tem_perfil_proprio() -> None:
+    carregador = CarregadorRecursos()
+
+    for marca in carregador.dados_mestre().marcas_canonicas:
+        assert carregador.perfil_marca(marca).generico is False, marca
+
+
+def test_marcas_com_perfil_lista_as_nove_marcas_canonicas() -> None:
+    assert CarregadorRecursos().marcas_com_perfil() == MARCAS_CANONICAS
+
+
+def test_palavras_proibidas_do_seo_real() -> None:
+    palavras = CarregadorRecursos().palavras_proibidas()
+
+    assert {"lindo", "incrível", "qualidade incomparável"} <= palavras
+    assert "especial" not in palavras
+
+
+def test_extrair_palavras_proibidas_le_so_a_secao_e_normaliza_caixa() -> None:
+    markdown = (
+        "# SEO\n\n## Outra seção\n\n- não conta\n\n## Palavras proibidas\n\nTexto.\n\n"
+        "- Lindo\n- Qualidade Incomparável \n\n## Depois\n\n- também não conta\n"
+    )
+
+    assert extrair_palavras_proibidas(markdown) == frozenset({"lindo", "qualidade incomparável"})
+
+
+def test_extrair_palavras_proibidas_falha_sem_secao() -> None:
+    with pytest.raises(ErroRecursos, match="Palavras proibidas"):
+        extrair_palavras_proibidas("# SEO\n\n- lindo\n")
+
+
+def test_extrair_palavras_proibidas_falha_com_secao_vazia() -> None:
+    with pytest.raises(ErroRecursos, match="sem itens"):
+        extrair_palavras_proibidas("## Palavras proibidas\n\nNada.\n\n## Fim\n")
+
+
+# --- preços LLM (task 12) ------------------------------------------------------------------
 
 
 def _dict_precos_completo() -> dict[str, Any]:
