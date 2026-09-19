@@ -50,12 +50,12 @@ def montar_leitor_planilha_entrada() -> LeitorPlanilhaEntrada:
 def montar_validador_entrada(fotos: Path) -> ValidadorEntrada:
     """Composition root do comando `validar`.
 
-    `marcas_com_perfil` fica vazio por enquanto (parâmetro simples, ver
-    `docs/tasks/05-validador-entrada.md`); a task 10 liga ao carregador de recursos.
+    `marcas_com_perfil` vem de `recursos/marcas/*.md` (task 13): marca canônica sem perfil
+    próprio recebe aviso e usará `_generico.md` nos prompts.
     """
-    dados_mestre = CarregadorRecursos().dados_mestre()
+    recursos = CarregadorRecursos()
     catalogo_fotos = CatalogoFotosDiretorio(fotos)
-    return ValidadorEntrada(dados_mestre, catalogo_fotos)
+    return ValidadorEntrada(recursos.dados_mestre(), catalogo_fotos, recursos.marcas_com_perfil())
 
 
 def montar_gerador_textos(configuracao: Configuracao) -> GeradorTextos:

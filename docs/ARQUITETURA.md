@@ -309,19 +309,21 @@ Referência: skill `claude-api` (documentação oficial) — os pontos abaixo s�
 
 ```
 src/loja_integrada_cadastro/recursos/
-  loja.md                 posicionamento da Kmilaa Modas, diferenciais, tom
-  copy.md                 regras Ogilvy, tabela característica→benefício, estrutura HTML
+  loja.md                 posicionamento da Kmilaa Modas, diferenciais, tom ✅ task 13
+  copy.md                 regras Ogilvy, tabela característica→benefício, estrutura HTML ✅ task 13
   seo.md                  regras de tag title/meta/headings/conteúdo (Google SEO Starter Guide
                           + limites observados na POC) e lista de adjetivos/clichês proibidos
-  qa.md                   checklist do revisor (critérios objetivos de reprovação)
-  marcas/
+                          na seção parseável `## Palavras proibidas` ✅ task 13
+  qa.md                   checklist do revisor (critérios objetivos de reprovação) ✅ task 13
+  marcas/                 ✅ task 13 (arquivo = slug da marca canônica)
     kiki.md  onda-marinha.md  somnii.md  coloritta.md  menina-anjo.md  luc-boo.md
     nina-go.md  kyly.md  lemon.md  _generico.md
   dados_mestre.yaml       marcas (canônica + aliases aceitos), cores da grade, tamanhos,
-                          categorias conhecidas (só referência)
+                          categorias conhecidas (só referência) ✅ task 02
   precos_llm.yaml         preços por modelo (USD/MTok, com data de referência) ✅ task 12
   prompts/
-    copywriter.j2  seo.j2  qa.j2   (blocos sistema_fixo / sistema_marca / usuario) 🔲 task 13
+    copywriter.j2 🔲 task 14   seo.j2 🔲 task 15   qa.j2 🔲 task 16
+                            (blocos sistema_fixo / sistema_marca / usuario)
 ```
 
 Markdown é carregado como texto (prosa para o modelo); YAML é carregado e validado num
@@ -333,6 +335,10 @@ são recursos do pacote (`importlib.resources`), então o sistema funciona insta
 do repositório.
 
 Marca sem perfil próprio usa `_generico.md` (posicionamento da loja) e o relatório avisa.
+✅ Implementado (task 13): `CarregadorRecursos.perfil_marca(marca) -> PerfilMarca(marca, texto,
+generico)`, `marcas_com_perfil()` (alimenta o aviso do `validar`) e `palavras_proibidas()`
+(lista fechada em `casefold()` para o validador de regra da task 14). Spec viva em
+`docs/specs/agentes-textos.md`.
 
 ### 6.5 Modelos e custo (padrão sugerido, tudo configurável)
 
@@ -460,6 +466,7 @@ src/loja_integrada_cadastro/
     ✅ resultado_validacao.py        ProblemaValidacao, ResultadoValidacao {problemas, avisos, aprovado} (task 05)
     ✅ foto_produto.py               FotoProduto (frozen: sku_pai, ordem, arquivo_origem, nome, chave, url, bytes) (task 07; perdeu `cor` no ADR-009)
     ✅ textos_produto.py             TextosProduto (4 campos) + como_mapa() (task 09)
+    ✅ perfil_marca.py               PerfilMarca (frozen: marca, texto, generico) (task 13)
     🔲 veredicto_qa.py               VeredictoQa + ProblemaQa
     ✅ mensagem_llm.py / pedido_llm.py   MensagemLlm(papel, conteudo); PedidoLlm(blocos_sistema, mensagens, modelo, effort: EffortLlm, max_tokens) (task 12)
     ✅ uso_llm.py / resposta_llm.py      UsoLlm (4 contadores + custo Decimal); RespostaLlm[T](saida, texto, uso, modelo, request_id, stop_reason) (task 12)
@@ -519,15 +526,15 @@ src/loja_integrada_cadastro/
     ✅ gerador_textos_dummy.py                GeradorTextosDummy: textos determinísticos dentro dos limites de §6.1 — provisório (task 09), removido na task 16 (ADR-007)
     ✅ cliente_llm_anthropic.py               ClienteLlmAnthropic(client, tabela_precos): beta parse() com dataclass, cache no último bloco de system, fallbacks="default", usage/custo, erros → ErroGeracaoTexto (task 12)
     ✅ repositorio_prompts_jinja.py           RepositorioPromptsJinja(loader=None): PackageLoader recursos/prompts, blocos separados (task 12; `esquemas_llm.py` previsto não existe — o SDK aceita o dataclass direto)
-    ✅ carregador_recursos.py                 lê recursos/ (md, yaml) via importlib.resources (task 02); precos_llm() (task 12)
+    ✅ carregador_recursos.py                 lê recursos/ (md, yaml) via importlib.resources (task 02); precos_llm() (task 12); perfil_marca(), marcas_com_perfil(), palavras_proibidas() (task 13)
     ✅ repositorio_estado_lote_json.py         RepositorioEstadoLoteJson (task 06)
     ✅ escritor_planilha_saida_openpyxl.py     EscritorPlanilhaSaidaOpenpyxl: aba única Sheet1, erro acima de 9.997 linhas (task 10)
     🔲 consulta_loja_http.py                  httpx + selectolax
   config/
     ✅ configuracao.py                        Configuracao (frozen dataclass) lida de env/.env; exigir_anthropic()/exigir_r2() (task 01)
     ✅ leitor_ambiente.py                     LeitorAmbiente: conversão de variáveis com erro claro (task 01)
-    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05); ✅ montar_gerador_textos() (task 09; troca para IA na 16); ✅ montar_montador_planilha() (task 10); ✅ montar_pipeline_fotos(), montar_processador_lote() (task 11); ✅ montar_cliente_llm(configuracao), montar_repositorio_prompts() (task 12, ainda fora do wiring de `processar`); 🔲 montar_verificador()
-  🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; precos_llm.yaml + prompts/README.md ✅ task 12; demais arquivos pendentes)
+    🔲 composicao.py                          ✅ montar_gerador_modelo_entrada() (task 04); ✅ montar_leitor_planilha_entrada(), montar_validador_entrada() (task 05; liga marcas_com_perfil() desde a task 13); ✅ montar_gerador_textos() (task 09; troca para IA na 16); ✅ montar_montador_planilha() (task 10); ✅ montar_pipeline_fotos(), montar_processador_lote() (task 11); ✅ montar_cliente_llm(configuracao), montar_repositorio_prompts() (task 12, ainda fora do wiring de `processar`); 🔲 montar_verificador()
+  🔲 recursos/                                §6.4 (dados_mestre.yaml ✅ task 02; precos_llm.yaml + prompts/README.md ✅ task 12; loja/copy/seo/qa.md + marcas/*.md ✅ task 13; prompts/*.j2 🔲 tasks 14–16)
   ✅ cli.py                                   AplicacaoCli, argparse: modelo-entrada (task 04) | validar (task 05) | processar (task 11) | verificar (task 01; "não implementado", código 2)
 ```
 

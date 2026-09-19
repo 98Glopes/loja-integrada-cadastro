@@ -2,7 +2,7 @@
 
 **Responsabilidade:** reprovar cedo (antes de gastar LLM/upload) tudo que faria a importação
 real da Loja Integrada falhar, e avisar sobre o que merece atenção sem bloquear.
-**Estado:** implementado pela task 05 · última atualização 2026-09-17 (fix ad-hoc, ADR-009)
+**Estado:** implementado pela task 05 · última atualização 2026-09-19 (task 13)
 
 ## Arquivos
 
@@ -79,8 +79,8 @@ reprovado (N problema(s), M aviso(s))`); código de saída `0` se aprovado, `1`
 1. **Marca**: `DadosMestre.marca_canonica` resolve canônica ou alias e o produto devolvido já
    vem com `marca` normalizada para a grafia canônica; marca proibida (`motivo_marca_proibida`)
    ou desconhecida vira problema. Marca canônica fora do parâmetro `marcas_com_perfil` vira
-   aviso (lista vazia por padrão em `montar_validador_entrada` — a task 13 liga ao carregador de
-   recursos).
+   aviso (`montar_validador_entrada` passa `CarregadorRecursos().marcas_com_perfil()` desde a
+   task 13; o padrão do construtor continua vazio).
 2. **Campos obrigatórios**: `nome_fornecedor`, `tipo_peca`, `composicao`, `detalhes`,
    `faixa_tamanho` e `categoria` vazios viram problema (defesa extra; o leitor de planilha já
    garante isso hoje).
@@ -111,9 +111,10 @@ pasta, ou pasta sem nenhum arquivo aceito, devolve `[]`, sem lançar exceção.
 
 - Não decodifica imagem nenhuma (HEIC incluído) — só extensão e existência de arquivo; abrir e
   processar a imagem é escopo da task 07 (Pillow/`pillow-heif`).
-- `marcas_com_perfil` é um parâmetro simples (`frozenset[str]`); `montar_validador_entrada`
-  passa vazio — toda marca aparece com aviso "sem perfil" até a task 13 ligar ao carregador de
-  recursos.
+- `marcas_com_perfil` é um parâmetro simples (`frozenset[str]`); desde a task 13
+  `montar_validador_entrada` passa `CarregadorRecursos().marcas_com_perfil()` (canônicas com
+  `recursos/marcas/<slug>.md`), então o aviso "sem perfil" só aparece para marca canônica nova
+  sem arquivo de perfil — hoje nenhuma.
 - Não persiste nada (workspace/estado é a task 06); cada chamada a `validar` é sem estado.
 - Cabeçalho duplicado ou planilha malformada continuam sendo erro do leitor
   (`ErroPlanilhaEntrada`, task 04), não deste módulo.
@@ -149,3 +150,6 @@ pasta, ou pasta sem nenhum arquivo aceito, devolve `[]`, sem lançar exceção.
   `dict[cor, list[Path]]`); `cores_disponiveis` removido; `_validar_fotos` simplificado para só
   "o SKU tem alguma foto" — perde a checagem por cor e o aviso de subpasta sem cor
   correspondente.
+- Task 13 (2026-09-19): `montar_validador_entrada` injeta `CarregadorRecursos().marcas_com_perfil()`
+  (9 marcas canônicas com `recursos/marcas/<slug>.md`); aviso "sem perfil de marca" deixa de
+  aparecer para toda marca.

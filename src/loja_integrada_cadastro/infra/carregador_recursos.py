@@ -3,17 +3,24 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 from importlib import resources
+from importlib.resources.abc import Traversable
 from typing import Any
 
 import yaml
 
 from loja_integrada_cadastro.models.dados_mestre import DadosMestre
 from loja_integrada_cadastro.models.exceptions.erro_recursos import ErroRecursos
+from loja_integrada_cadastro.models.perfil_marca import PerfilMarca
 from loja_integrada_cadastro.models.preco_modelo_llm import PrecoModeloLlm
+from loja_integrada_cadastro.models.slug import slugificar
 from loja_integrada_cadastro.models.tabela_precos_llm import ARQUIVO_PRECOS_LLM, TabelaPrecosLlm
 
 _PACOTE_RECURSOS = "loja_integrada_cadastro.recursos"
 _ARQUIVO_DADOS_MESTRE = "dados_mestre.yaml"
+_ARQUIVO_SEO = "seo.md"
+_PASTA_MARCAS = "marcas"
+_ARQUIVO_MARCA_GENERICA = "_generico.md"
+_TITULO_PALAVRAS_PROIBIDAS = "## Palavras proibidas"
 
 
 class CarregadorRecursos:
@@ -25,10 +32,9 @@ class CarregadorRecursos:
 
     def texto(self, nome: str) -> str:
         """Lê `nome` como texto puro (usado para prompts/perfis de marca em Markdown)."""
-        recurso = resources.files(_PACOTE_RECURSOS) / nome
-        if not recurso.is_file():
+        if not self._existe(nome):
             raise ErroRecursos(nome, "arquivo não encontrado no pacote 'recursos/'")
-        return recurso.read_text(encoding="utf-8")
+        return self._recurso(nome).read_text(encoding="utf-8")
 
     def dados_mestre(self) -> DadosMestre:
         """Lê e valida `recursos/dados_mestre.yaml`, montando o dataclass `DadosMestre`."""
@@ -37,6 +43,32 @@ class CarregadorRecursos:
     def precos_llm(self) -> TabelaPrecosLlm:
         """Lê e valida `recursos/precos_llm.yaml`, montando `TabelaPrecosLlm`."""
         return montar_tabela_precos_llm(self._yaml(ARQUIVO_PRECOS_LLM))
+
+    def perfil_marca(self, marca_canonica: str) -> PerfilMarca:
+        """Devolve `recursos/marcas/<slug>.md`; sem arquivo próprio, cai em `_generico.md`."""
+        proprio = f"{_PASTA_MARCAS}/{slugificar(marca_canonica)}.md"
+        if self._existe(proprio):
+            return PerfilMarca(marca=marca_canonica, texto=self.texto(proprio), generico=False)
+        generico = f"{_PASTA_MARCAS}/{_ARQUIVO_MARCA_GENERICA}"
+        return PerfilMarca(marca=marca_canonica, texto=self.texto(generico), generico=True)
+
+    def marcas_com_perfil(self) -> frozenset[str]:
+        """Marcas canônicas de `dados_mestre.yaml` que têm `recursos/marcas/<slug>.md` próprio."""
+        return frozenset(
+            marca
+            for marca in self.dados_mestre().marcas_canonicas
+            if not self.perfil_marca(marca).generico
+        )
+
+    def palavras_proibidas(self) -> frozenset[str]:
+        """Lista fechada de adjetivos/clichês de `recursos/seo.md` (bloco parseável)."""
+        return extrair_palavras_proibidas(self.texto(_ARQUIVO_SEO))
+
+    def _existe(self, nome: str) -> bool:
+        return self._recurso(nome).is_file()
+
+    def _recurso(self, nome: str) -> Traversable:
+        return resources.files(_PACOTE_RECURSOS) / nome
 
     def _yaml(self, nome: str) -> object:
         try:
@@ -101,6 +133,28 @@ def montar_tabela_precos_llm(bruto: object) -> TabelaPrecosLlm:
         for modelo, precos_brutos in modelos.items()
     }
     return TabelaPrecosLlm(precos=precos, data_referencia=data_referencia)
+
+
+def extrair_palavras_proibidas(markdown_seo: str) -> frozenset[str]:
+    """Lê os itens da seção `## Palavras proibidas` de `seo.md` (isolada de I/O).
+
+    A seção vai do título até o próximo heading; cada item `- palavra` vira uma entrada em
+    `casefold()`, para o validador de regra comparar sem distinguir caixa. Seção ausente ou
+    vazia é `ErroRecursos`: o validador não pode rodar sem a lista.
+    """
+    linhas = iter(markdown_seo.splitlines())
+    if not any(linha.strip() == _TITULO_PALAVRAS_PROIBIDAS for linha in linhas):
+        raise ErroRecursos(_ARQUIVO_SEO, f"seção '{_TITULO_PALAVRAS_PROIBIDAS}' não encontrada")
+
+    palavras: set[str] = set()
+    for linha in linhas:
+        if linha.startswith("#"):
+            break
+        if linha.startswith("- "):
+            palavras.add(linha.removeprefix("- ").strip().casefold())
+    if not palavras:
+        raise ErroRecursos(_ARQUIVO_SEO, f"seção '{_TITULO_PALAVRAS_PROIBIDAS}' sem itens")
+    return frozenset(palavras)
 
 
 def _preco_modelo_de(modelo: str, precos_brutos: object) -> PrecoModeloLlm:
